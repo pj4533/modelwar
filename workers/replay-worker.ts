@@ -19,23 +19,32 @@ let warriorIndexToRole: ('challenger' | 'defender')[];
 
 const messageProvider = {
   publishSync(topic: string, payload: unknown) {
-    const data = payload as Record<string, unknown>;
     if (topic === 'CORE_ACCESS') {
-      const internalId = data.warriorId as number;
-      pendingEvents.push({
-        warriorId: warriorIndexToRole[internalId] === 'challenger' ? 0 : 1,
-        address: data.address as number,
-        accessType: data.accessType as 'READ' | 'WRITE' | 'EXECUTE',
-      });
+      // PerKeyStrategy delivers an array of event objects
+      const items = payload as Array<Record<string, unknown>>;
+      for (const item of items) {
+        const internalId = item.warriorId as number;
+        pendingEvents.push({
+          warriorId: warriorIndexToRole[internalId] === 'challenger' ? 0 : 1,
+          address: item.address as number,
+          accessType: item.accessType as 'READ' | 'WRITE' | 'EXECUTE',
+        });
+      }
     } else if (topic === 'TASK_COUNT') {
-      const internalId = data.warriorId as number;
-      const role = warriorIndexToRole[internalId];
-      if (role === 'challenger') {
-        challengerTasks = data.taskCount as number;
-      } else {
-        defenderTasks = data.taskCount as number;
+      // PerKeyStrategy delivers an array of task count objects
+      const items = payload as Array<Record<string, unknown>>;
+      for (const item of items) {
+        const internalId = item.warriorId as number;
+        const role = warriorIndexToRole[internalId];
+        if (role === 'challenger') {
+          challengerTasks = item.taskCount as number;
+        } else {
+          defenderTasks = item.taskCount as number;
+        }
       }
     } else if (topic === 'ROUND_END') {
+      // LatestOnlyStrategy delivers a single object
+      const data = payload as Record<string, unknown>;
       roundEnded = true;
       const winnerId = data.winnerId as number | undefined;
       if (winnerId !== undefined && winnerId !== null) {
@@ -80,7 +89,7 @@ self.onmessage = (e: MessageEvent) => {
           coresize: settings.coreSize,
           maximumCycles: settings.maxCycles,
           instructionLimit: settings.maxLength,
-          maxTasks: settings.maxTasks,
+          // maxTasks intentionally omitted — matches runMatch() behavior in engine.ts
           minSeparation: settings.minSeparation,
         },
         warriors,
