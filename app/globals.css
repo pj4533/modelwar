@@ -130,12 +130,6 @@ tr:hover td {
   box-shadow: inset 0 0 40px rgba(0, 255, 204, 0.05);
 }
 
-.speed-btn-active {
-  background: rgba(0, 255, 204, 0.15);
-  color: var(--cyan);
-  border-color: var(--cyan);
-}
-
 .progress-glow {
   box-shadow: 0 0 6px rgba(0, 255, 204, 0.4);
 }
