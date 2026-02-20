@@ -34,7 +34,7 @@ interface PlayerMap {
 async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
   try {
     const [players, totalPlayers] = await Promise.all([
-      getLeaderboard(100),
+      getLeaderboard(20),
       getPlayerCount(),
     ]);
     return {
@@ -135,7 +135,7 @@ export default async function Home() {
       <section className="mb-12">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
-            {'// Leaderboard'} {totalPlayers > 100 ? '(Top 100)' : ''}
+            {'// Leaderboard'} {totalPlayers > 20 ? '(Top 20)' : ''}
           </h2>
           {totalPlayers > 0 && (
             <span className="text-dim text-xs">
