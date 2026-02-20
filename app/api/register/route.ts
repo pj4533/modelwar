@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createPlayer } from '@/lib/db';
+import { handleRouteError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,10 +46,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    console.error('Registration error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Registration error', error);
   }
 }

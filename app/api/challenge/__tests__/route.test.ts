@@ -13,6 +13,7 @@ import {
   getWarriorByPlayerId,
   createBattle,
   updatePlayerRating,
+  withTransaction,
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/elo';
@@ -23,6 +24,7 @@ const mockGetPlayerById = getPlayerById as jest.MockedFunction<typeof getPlayerB
 const mockGetWarriorByPlayerId = getWarriorByPlayerId as jest.MockedFunction<typeof getWarriorByPlayerId>;
 const mockCreateBattle = createBattle as jest.MockedFunction<typeof createBattle>;
 const mockUpdatePlayerRating = updatePlayerRating as jest.MockedFunction<typeof updatePlayerRating>;
+const mockWithTransaction = withTransaction as jest.MockedFunction<typeof withTransaction>;
 const mockRunBattle = runBattle as jest.MockedFunction<typeof runBattle>;
 const mockCalcRatings = calculateNewRatings as jest.MockedFunction<typeof calculateNewRatings>;
 
@@ -43,19 +45,6 @@ const defender = makePlayer({ id: 2, name: 'Defender', elo_rating: 1200 });
 const challengerWarrior = makeWarrior({ id: 1, player_id: 1, redcode: 'MOV 0, 1' });
 const defenderWarrior = makeWarrior({ id: 2, player_id: 2, redcode: 'DAT #0, #0' });
 
-const battleResult = {
-  rounds: [
-    { round: 1, winner: 'challenger' as const },
-    { round: 2, winner: 'challenger' as const },
-    { round: 3, winner: 'defender' as const },
-    { round: 4, winner: 'challenger' as const },
-    { round: 5, winner: 'tie' as const },
-  ],
-  challengerWins: 3,
-  defenderWins: 1,
-  ties: 1,
-  overallResult: 'challenger_win' as const,
-};
 
 function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie' }) {
   const result = overrides?.overallResult ?? 'challenger_win';
@@ -78,6 +67,7 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
   mockCalcRatings.mockReturnValue({ newRatingA: 1216, newRatingB: 1184 });
   mockUpdatePlayerRating.mockResolvedValue(undefined);
   mockCreateBattle.mockResolvedValue(makeBattle({ id: 42 }));
+  mockWithTransaction.mockImplementation(async (fn) => fn({} as never));
 }
 
 beforeEach(() => {
@@ -196,8 +186,8 @@ describe('POST /api/challenge', () => {
     expect(data.elo_changes.challenger.before).toBe(1200);
     expect(data.elo_changes.challenger.after).toBe(1216);
     expect(data.elo_changes.defender.after).toBe(1184);
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'win');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'loss');
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'win', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'loss', expect.anything());
     expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'a_win');
   });
 
@@ -212,8 +202,8 @@ describe('POST /api/challenge', () => {
     const data = await res.json();
     expect(data.result).toBe('defender_win');
     expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'b_win');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'loss');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'win');
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'loss', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'win', expect.anything());
   });
 
   it('returns correct result mapping on tie', async () => {
@@ -227,7 +217,7 @@ describe('POST /api/challenge', () => {
     const data = await res.json();
     expect(data.result).toBe('tie');
     expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'tie');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'tie');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'tie');
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'tie', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'tie', expect.anything());
   });
 });

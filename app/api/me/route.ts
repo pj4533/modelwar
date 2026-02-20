@@ -1,11 +1,8 @@
 import { NextRequest } from 'next/server';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import { getWarriorByPlayerId } from '@/lib/db';
+import { withAuth, handleRouteError } from '@/lib/api-utils';
 
-export async function GET(request: NextRequest) {
-  const player = await authenticateRequest(request);
-  if (!player) return unauthorizedResponse();
-
+export const GET = withAuth(async (_request: NextRequest, player) => {
   try {
     const warrior = await getWarriorByPlayerId(player.id);
 
@@ -26,10 +23,6 @@ export async function GET(request: NextRequest) {
         : null,
     });
   } catch (error) {
-    console.error('Profile error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Profile error', error);
   }
-}
+});

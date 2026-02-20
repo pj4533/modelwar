@@ -1,20 +1,13 @@
 import { NextRequest } from 'next/server';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import { getBattlesByPlayerId } from '@/lib/db';
+import { withAuth, handleRouteError } from '@/lib/api-utils';
 
-export async function GET(request: NextRequest) {
-  const player = await authenticateRequest(request);
-  if (!player) return unauthorizedResponse();
-
+export const GET = withAuth(async (_request: NextRequest, player) => {
   try {
     const battles = await getBattlesByPlayerId(player.id);
 
     return Response.json({ battles });
   } catch (error) {
-    console.error('Battles fetch error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Battles fetch error', error);
   }
-}
+});

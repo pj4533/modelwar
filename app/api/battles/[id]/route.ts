@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
+import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET(
   _request: NextRequest,
@@ -44,10 +45,6 @@ export async function GET(
       created_at: battle.created_at,
     });
   } catch (error) {
-    console.error('Battle fetch error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Battle fetch error', error);
   }
 }

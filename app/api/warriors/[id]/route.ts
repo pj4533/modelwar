@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getWarriorById, getPlayerById } from '@/lib/db';
+import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET(
   _request: NextRequest,
@@ -25,13 +26,8 @@ export async function GET(
       player: player ? { id: player.id, name: player.name, elo_rating: player.elo_rating } : null,
       created_at: warrior.created_at,
       updated_at: warrior.updated_at,
-      // Note: source code is NOT exposed
     });
   } catch (error) {
-    console.error('Warrior fetch error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Warrior fetch error', error);
   }
 }

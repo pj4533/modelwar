@@ -26,17 +26,6 @@ export interface BattleResult {
   overallResult: 'challenger_win' | 'defender_win' | 'tie';
 }
 
-interface MatchWarriorResult {
-  won: number;
-  drawn: number;
-  lost: number;
-}
-
-interface MatchResult {
-  rounds: number;
-  results: MatchWarriorResult[];
-}
-
 export function parseWarrior(redcode: string): ParseResult {
   const result = corewar.parse(redcode);
 
@@ -77,17 +66,18 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   let dWins = 0;
   let tieCount = 0;
 
+  const singleRules = {
+    rounds: 1,
+    options: {
+      coresize: CORE_SIZE,
+      maximumCycles: MAX_CYCLES,
+      instructionLimit: MAX_LENGTH,
+      maxTasks: MAX_TASKS,
+      minSeparation: MIN_SEPARATION,
+    },
+  };
+
   for (let i = 0; i < NUM_ROUNDS; i++) {
-    const singleRules = {
-      rounds: 1,
-      options: {
-        coresize: CORE_SIZE,
-        maximumCycles: MAX_CYCLES,
-        instructionLimit: MAX_LENGTH,
-        maxTasks: MAX_TASKS,
-        minSeparation: MIN_SEPARATION,
-      },
-    };
 
     // Alternate starting positions by swapping warrior order each round
     const swapped = i % 2 !== 0;
@@ -95,10 +85,10 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
       ? [{ source: defenderParsed }, { source: challengerParsed }]
       : [{ source: challengerParsed }, { source: defenderParsed }];
 
-    const roundResult = corewar.runMatch(singleRules, warriors) as unknown as MatchResult;
+    const roundResult = corewar.runMatch(singleRules, warriors);
 
-    const w1 = roundResult.results[0];
-    const w2 = roundResult.results[1];
+    const w1 = roundResult.warriors[0];
+    const w2 = roundResult.warriors[1];
 
     let winner: 'challenger' | 'defender' | 'tie';
     if (w1.won > w2.won) {

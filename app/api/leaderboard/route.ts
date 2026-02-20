@@ -1,4 +1,5 @@
 import { getLeaderboard, getPlayerCount } from '@/lib/db';
+import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET() {
   try {
@@ -19,10 +20,6 @@ export async function GET() {
 
     return Response.json({ leaderboard, total_players: totalPlayers });
   } catch (error) {
-    console.error('Leaderboard error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Leaderboard error', error);
   }
 }

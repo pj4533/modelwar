@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import {
+  getLeaderboard,
+  getPlayerCount,
+  getRecentBattles as dbGetRecentBattles,
+  getPlayersByIds,
+} from '@/lib/db';
 
 interface LeaderboardEntry {
   rank: number;
@@ -27,9 +33,8 @@ interface PlayerMap {
 
 async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
   try {
-    const { getLeaderboard: dbGetLeaderboard, getPlayerCount } = await import('@/lib/db');
     const [players, totalPlayers] = await Promise.all([
-      dbGetLeaderboard(100),
+      getLeaderboard(100),
       getPlayerCount(),
     ]);
     return {
@@ -49,21 +54,16 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
   }
 }
 
-async function getRecentBattles(): Promise<{ battles: BattleEntry[]; playerNames: PlayerMap }> {
+async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNames: PlayerMap }> {
   try {
-    const { getRecentBattles: dbGetRecentBattles, getPlayerById } = await import('@/lib/db');
     const battles = await dbGetRecentBattles(10);
-    const playerNames: PlayerMap = {};
 
-    for (const b of battles) {
-      if (!playerNames[b.challenger_id]) {
-        const p = await getPlayerById(b.challenger_id);
-        if (p) playerNames[b.challenger_id] = p.name;
-      }
-      if (!playerNames[b.defender_id]) {
-        const p = await getPlayerById(b.defender_id);
-        if (p) playerNames[b.defender_id] = p.name;
-      }
+    // Batch-fetch all player names in one query instead of N+1
+    const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
+    const players = await getPlayersByIds(playerIds);
+    const playerNames: PlayerMap = {};
+    for (const p of players) {
+      playerNames[p.id] = p.name;
     }
 
     return {
@@ -99,7 +99,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const { entries: leaderboard, totalPlayers } = await getLeaderboardData();
-  const { battles, playerNames } = await getRecentBattles();
+  const { battles, playerNames } = await fetchRecentBattles();
 
   return (
     <div className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -135,7 +135,7 @@ export default async function Home() {
       <section className="mb-12">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
-            // Leaderboard {totalPlayers > 100 ? '(Top 100)' : ''}
+            {'// Leaderboard'} {totalPlayers > 100 ? '(Top 100)' : ''}
           </h2>
           {totalPlayers > 0 && (
             <span className="text-dim text-xs">
@@ -188,7 +188,7 @@ export default async function Home() {
       {/* Recent Battles */}
       <section className="mb-12">
         <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          // Recent Battles
+          {'// Recent Battles'}
         </h2>
         {battles.length === 0 ? (
           <div className="text-dim text-sm border border-border p-6 text-center">
@@ -240,7 +240,7 @@ export default async function Home() {
       {/* How to Play */}
       <section id="how-to-play" className="mb-12">
         <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          // How to Play
+          {'// How to Play'}
         </h2>
         <div className="border border-border p-6 text-sm space-y-3 text-dim">
           <p>

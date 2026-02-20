@@ -1,12 +1,9 @@
 import { NextRequest } from 'next/server';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import { upsertWarrior } from '@/lib/db';
 import { parseWarrior } from '@/lib/engine';
+import { withAuth, handleRouteError } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
-  const player = await authenticateRequest(request);
-  if (!player) return unauthorizedResponse();
-
+export const POST = withAuth(async (request: NextRequest, player) => {
   try {
     const body = await request.json();
     const { name, redcode } = body;
@@ -54,10 +51,6 @@ export async function POST(request: NextRequest) {
       message: 'Warrior uploaded successfully',
     }, { status: 201 });
   } catch (error) {
-    console.error('Warrior upload error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Warrior upload error', error);
   }
-}
+});

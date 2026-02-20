@@ -1,18 +1,16 @@
 import { NextRequest } from 'next/server';
-import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import {
   getPlayerById,
   getWarriorByPlayerId,
   createBattle,
   updatePlayerRating,
+  withTransaction,
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/elo';
+import { withAuth, handleRouteError } from '@/lib/api-utils';
 
-export async function POST(request: NextRequest) {
-  const challenger = await authenticateRequest(request);
-  if (!challenger) return unauthorizedResponse();
-
+export const POST = withAuth(async (request: NextRequest, challenger) => {
   try {
     const body = await request.json();
     const { defender_id } = body;
@@ -62,49 +60,41 @@ export async function POST(request: NextRequest) {
     );
 
     // Calculate new ELO ratings
-    let eloResult: 'a_win' | 'b_win' | 'tie';
-    let challengerResultType: 'win' | 'loss' | 'tie';
-    let defenderResultType: 'win' | 'loss' | 'tie';
-
-    if (battleResult.overallResult === 'challenger_win') {
-      eloResult = 'a_win';
-      challengerResultType = 'win';
-      defenderResultType = 'loss';
-    } else if (battleResult.overallResult === 'defender_win') {
-      eloResult = 'b_win';
-      challengerResultType = 'loss';
-      defenderResultType = 'win';
-    } else {
-      eloResult = 'tie';
-      challengerResultType = 'tie';
-      defenderResultType = 'tie';
-    }
+    const resultMap = {
+      challenger_win: { elo: 'a_win' as const, challenger: 'win' as const, defender: 'loss' as const },
+      defender_win: { elo: 'b_win' as const, challenger: 'loss' as const, defender: 'win' as const },
+      tie: { elo: 'tie' as const, challenger: 'tie' as const, defender: 'tie' as const },
+    };
+    const mapped = resultMap[battleResult.overallResult];
+    const challengerResultType = mapped.challenger;
+    const defenderResultType = mapped.defender;
 
     const { newRatingA, newRatingB } = calculateNewRatings(
       challenger.elo_rating,
       defender.elo_rating,
-      eloResult
+      mapped.elo
     );
 
-    // Update ratings
-    await updatePlayerRating(challenger.id, newRatingA, challengerResultType);
-    await updatePlayerRating(defender.id, newRatingB, defenderResultType);
+    // Update ratings and record battle atomically
+    const battle = await withTransaction(async (client) => {
+      await updatePlayerRating(challenger.id, newRatingA, challengerResultType, client);
+      await updatePlayerRating(defender.id, newRatingB, defenderResultType, client);
 
-    // Record battle
-    const battle = await createBattle({
-      challenger_id: challenger.id,
-      defender_id: defender.id,
-      challenger_warrior_id: challengerWarrior.id,
-      defender_warrior_id: defenderWarrior.id,
-      result: battleResult.overallResult,
-      rounds: battleResult.rounds.length,
-      challenger_wins: battleResult.challengerWins,
-      defender_wins: battleResult.defenderWins,
-      ties: battleResult.ties,
-      challenger_elo_before: challenger.elo_rating,
-      defender_elo_before: defender.elo_rating,
-      challenger_elo_after: newRatingA,
-      defender_elo_after: newRatingB,
+      return createBattle({
+        challenger_id: challenger.id,
+        defender_id: defender.id,
+        challenger_warrior_id: challengerWarrior.id,
+        defender_warrior_id: defenderWarrior.id,
+        result: battleResult.overallResult,
+        rounds: battleResult.rounds.length,
+        challenger_wins: battleResult.challengerWins,
+        defender_wins: battleResult.defenderWins,
+        ties: battleResult.ties,
+        challenger_elo_before: challenger.elo_rating,
+        defender_elo_before: defender.elo_rating,
+        challenger_elo_after: newRatingA,
+        defender_elo_after: newRatingB,
+      }, client);
     });
 
     return Response.json({
@@ -132,10 +122,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Challenge error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Challenge error', error);
   }
-}
+});

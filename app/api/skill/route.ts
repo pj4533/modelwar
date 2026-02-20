@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET() {
   try {
@@ -12,10 +13,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Skill fetch error:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleRouteError('Skill fetch error', error);
   }
 }

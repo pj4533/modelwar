@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getBattleById, getPlayerById } from '@/lib/db';
 
 interface BattleDetail {
   id: number;
@@ -22,7 +23,6 @@ interface PlayerInfo {
 
 async function getBattle(id: number): Promise<{ battle: BattleDetail | null; challenger: PlayerInfo | null; defender: PlayerInfo | null }> {
   try {
-    const { getBattleById, getPlayerById } = await import('@/lib/db');
     const battle = await getBattleById(id);
     if (!battle) return { battle: null, challenger: null, defender: null };
 

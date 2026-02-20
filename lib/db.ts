@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 
 // pg v9 treats sslmode=require as verify-full, which fails with Supabase's
 // pooler cert. Strip sslmode from URL and configure SSL explicitly.
@@ -65,6 +65,21 @@ export interface Battle {
   created_at: Date;
 }
 
+export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 // Player queries
 
 export async function createPlayer(name: string): Promise<Player> {
@@ -104,15 +119,28 @@ export async function getPlayerCount(): Promise<number> {
 export async function updatePlayerRating(
   playerId: number,
   newRating: number,
-  resultType: 'win' | 'loss' | 'tie'
+  resultType: 'win' | 'loss' | 'tie',
+  client?: PoolClient
 ): Promise<void> {
   const winInc = resultType === 'win' ? 1 : 0;
   const lossInc = resultType === 'loss' ? 1 : 0;
   const tieInc = resultType === 'tie' ? 1 : 0;
 
-  await query(
-    'UPDATE players SET elo_rating = $1, wins = wins + $2, losses = losses + $3, ties = ties + $4, updated_at = NOW() WHERE id = $5',
-    [newRating, winInc, lossInc, tieInc, playerId]
+  const sql = 'UPDATE players SET elo_rating = $1, wins = wins + $2, losses = losses + $3, ties = ties + $4, updated_at = NOW() WHERE id = $5';
+  const params = [newRating, winInc, lossInc, tieInc, playerId];
+
+  if (client) {
+    await client.query(sql, params);
+  } else {
+    await query(sql, params);
+  }
+}
+
+export async function getPlayersByIds(ids: number[]): Promise<Player[]> {
+  if (ids.length === 0) return [];
+  return query<Player>(
+    'SELECT id, name, elo_rating, wins, losses, ties, created_at FROM players WHERE id = ANY($1)',
+    [ids]
   );
 }
 
@@ -148,9 +176,8 @@ export async function getWarriorById(id: number): Promise<Warrior | null> {
 
 // Battle queries
 
-export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>): Promise<Battle> {
-  const rows = await query<Battle>(
-    `INSERT INTO battles (
+export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>, client?: PoolClient): Promise<Battle> {
+  const sql = `INSERT INTO battles (
       challenger_id, defender_id,
       challenger_warrior_id, defender_warrior_id,
       result, rounds,
@@ -158,16 +185,21 @@ export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>): P
       challenger_elo_before, defender_elo_before,
       challenger_elo_after, defender_elo_after
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-    RETURNING *`,
-    [
-      battle.challenger_id, battle.defender_id,
-      battle.challenger_warrior_id, battle.defender_warrior_id,
-      battle.result, battle.rounds,
-      battle.challenger_wins, battle.defender_wins, battle.ties,
-      battle.challenger_elo_before, battle.defender_elo_before,
-      battle.challenger_elo_after, battle.defender_elo_after,
-    ]
-  );
+    RETURNING *`;
+  const params = [
+    battle.challenger_id, battle.defender_id,
+    battle.challenger_warrior_id, battle.defender_warrior_id,
+    battle.result, battle.rounds,
+    battle.challenger_wins, battle.defender_wins, battle.ties,
+    battle.challenger_elo_before, battle.defender_elo_before,
+    battle.challenger_elo_after, battle.defender_elo_after,
+  ];
+
+  if (client) {
+    const result = await client.query(sql, params);
+    return result.rows[0] as Battle;
+  }
+  const rows = await query<Battle>(sql, params);
   return rows[0];
 }
 
