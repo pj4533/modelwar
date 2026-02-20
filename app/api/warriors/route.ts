@@ -31,7 +31,7 @@ export const POST = withAuth(async (request: NextRequest, player) => {
       );
     }
 
-    // Validate redcode (uses MAX_WARRIOR_LENGTH = 200, loosest limit)
+    // Validate redcode (uses MAX_WARRIOR_LENGTH = 1000, loosest limit across all hills)
     const parseResult = parseWarrior(redcode);
     if (!parseResult.success) {
       return Response.json(
