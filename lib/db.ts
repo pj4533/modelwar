@@ -71,7 +71,20 @@ export interface Battle {
   challenger_redcode: string | null;
   defender_redcode: string | null;
   round_results: RoundResultRecord[] | null;
+  hill: string;
   created_at: Date;
+}
+
+export interface PlayerHillStats {
+  id: number;
+  player_id: number;
+  hill: string;
+  elo_rating: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -125,8 +138,39 @@ export async function getPlayerCount(): Promise<number> {
   return parseInt(rows[0].count, 10);
 }
 
-export async function updatePlayerRating(
+
+export async function getPlayersByIds(ids: number[]): Promise<Player[]> {
+  if (ids.length === 0) return [];
+  return query<Player>(
+    'SELECT id, name, elo_rating, wins, losses, ties, created_at FROM players WHERE id = ANY($1)',
+    [ids]
+  );
+}
+
+// Hill stats queries
+
+export async function getOrCreateHillStats(
   playerId: number,
+  hill: string,
+  client?: PoolClient
+): Promise<PlayerHillStats> {
+  const sql = `INSERT INTO player_hill_stats (player_id, hill)
+    VALUES ($1, $2)
+    ON CONFLICT (player_id, hill) DO UPDATE SET updated_at = player_hill_stats.updated_at
+    RETURNING *`;
+  const params = [playerId, hill];
+
+  if (client) {
+    const result = await client.query(sql, params);
+    return result.rows[0] as PlayerHillStats;
+  }
+  const rows = await query<PlayerHillStats>(sql, params);
+  return rows[0];
+}
+
+export async function updateHillStats(
+  playerId: number,
+  hill: string,
   newRating: number,
   resultType: 'win' | 'loss' | 'tie',
   client?: PoolClient
@@ -135,8 +179,10 @@ export async function updatePlayerRating(
   const lossInc = resultType === 'loss' ? 1 : 0;
   const tieInc = resultType === 'tie' ? 1 : 0;
 
-  const sql = 'UPDATE players SET elo_rating = $1, wins = wins + $2, losses = losses + $3, ties = ties + $4, updated_at = NOW() WHERE id = $5';
-  const params = [newRating, winInc, lossInc, tieInc, playerId];
+  const sql = `UPDATE player_hill_stats
+    SET elo_rating = $1, wins = wins + $2, losses = losses + $3, ties = ties + $4, updated_at = NOW()
+    WHERE player_id = $5 AND hill = $6`;
+  const params = [newRating, winInc, lossInc, tieInc, playerId, hill];
 
   if (client) {
     await client.query(sql, params);
@@ -145,11 +191,38 @@ export async function updatePlayerRating(
   }
 }
 
-export async function getPlayersByIds(ids: number[]): Promise<Player[]> {
-  if (ids.length === 0) return [];
-  return query<Player>(
-    'SELECT id, name, elo_rating, wins, losses, ties, created_at FROM players WHERE id = ANY($1)',
-    [ids]
+export async function getHillLeaderboard(hill: string, limit = 100): Promise<(PlayerHillStats & { name: string })[]> {
+  return query<PlayerHillStats & { name: string }>(
+    `SELECT phs.id, phs.player_id, phs.hill, phs.elo_rating, phs.wins, phs.losses, phs.ties,
+            phs.created_at, phs.updated_at, p.name
+     FROM player_hill_stats phs
+     JOIN players p ON p.id = phs.player_id
+     WHERE phs.hill = $1
+     ORDER BY phs.elo_rating DESC, phs.wins DESC
+     LIMIT $2`,
+    [hill, limit]
+  );
+}
+
+export async function getHillPlayerCount(hill: string): Promise<number> {
+  const rows = await query<{ count: string }>(
+    'SELECT COUNT(*) as count FROM player_hill_stats WHERE hill = $1',
+    [hill]
+  );
+  return parseInt(rows[0].count, 10);
+}
+
+export async function getRecentBattlesByHill(hill: string, limit = 10): Promise<Battle[]> {
+  return query<Battle>(
+    'SELECT * FROM battles WHERE hill = $1 ORDER BY created_at DESC LIMIT $2',
+    [hill, limit]
+  );
+}
+
+export async function getPlayerHillStats(playerId: number): Promise<PlayerHillStats[]> {
+  return query<PlayerHillStats>(
+    'SELECT * FROM player_hill_stats WHERE player_id = $1',
+    [playerId]
   );
 }
 
@@ -193,8 +266,8 @@ export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>, cl
       challenger_wins, defender_wins, ties,
       challenger_elo_before, defender_elo_before,
       challenger_elo_after, defender_elo_after,
-      challenger_redcode, defender_redcode, round_results
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      challenger_redcode, defender_redcode, round_results, hill
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     RETURNING *`;
   const params = [
     battle.challenger_id, battle.defender_id,
@@ -205,6 +278,7 @@ export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>, cl
     battle.challenger_elo_after, battle.defender_elo_after,
     battle.challenger_redcode, battle.defender_redcode,
     battle.round_results ? JSON.stringify(battle.round_results) : null,
+    battle.hill,
   ];
 
   if (client) {

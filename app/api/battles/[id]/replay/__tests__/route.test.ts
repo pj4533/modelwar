@@ -55,7 +55,7 @@ describe('GET /api/battles/[id]/replay', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns 200 with replay data when redcode is available', async () => {
+  it('returns 200 with replay data and big hill settings', async () => {
     const roundResults = [
       { round: 1, winner: 'challenger' as const, seed: 12345 },
       { round: 2, winner: 'defender' as const, seed: 67890 },
@@ -67,6 +67,7 @@ describe('GET /api/battles/[id]/replay', () => {
     mockGetBattleById.mockResolvedValue(
       makeBattle({
         id: 42,
+        hill: 'big',
         challenger_redcode: 'MOV 0, 1',
         defender_redcode: 'DAT #0, #0',
         round_results: roundResults,
@@ -82,6 +83,7 @@ describe('GET /api/battles/[id]/replay', () => {
 
     const data = await res.json();
     expect(data.battle_id).toBe(42);
+    expect(data.hill).toBe('big');
     expect(data.challenger.name).toBe('Alice');
     expect(data.challenger.redcode).toBe('MOV 0, 1');
     expect(data.defender.name).toBe('Bob');
@@ -94,6 +96,56 @@ describe('GET /api/battles/[id]/replay', () => {
       maxTasks: 10000,
       minSeparation: 200,
     });
+  });
+
+  it('returns 94nop hill settings for 94nop battle', async () => {
+    mockGetBattleById.mockResolvedValue(
+      makeBattle({
+        id: 99,
+        hill: '94nop',
+        challenger_redcode: 'MOV 0, 1',
+        defender_redcode: 'DAT #0, #0',
+        round_results: [{ round: 1, winner: 'tie' as const, seed: 1 }],
+      })
+    );
+    mockGetPlayerById
+      .mockResolvedValueOnce(makePlayer({ id: 1, name: 'Alice' }))
+      .mockResolvedValueOnce(makePlayer({ id: 2, name: 'Bob' }));
+
+    const req = createRequest('http://localhost:3000/api/battles/99/replay');
+    const res = await GET(req, { params: Promise.resolve({ id: '99' }) });
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.hill).toBe('94nop');
+    expect(data.settings).toEqual({
+      coreSize: 8000,
+      maxCycles: 80000,
+      maxLength: 100,
+      maxTasks: 8000,
+      minSeparation: 100,
+    });
+  });
+
+  it('includes hill field in response', async () => {
+    mockGetBattleById.mockResolvedValue(
+      makeBattle({
+        id: 1,
+        hill: 'big',
+        challenger_redcode: 'MOV 0, 1',
+        defender_redcode: 'DAT #0, #0',
+        round_results: [{ round: 1, winner: 'tie' as const, seed: 1 }],
+      })
+    );
+    mockGetPlayerById.mockResolvedValue(makePlayer());
+
+    const req = createRequest('http://localhost:3000/api/battles/1/replay');
+    const res = await GET(req, { params: Promise.resolve({ id: '1' }) });
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data).toHaveProperty('hill');
+    expect(data.hill).toBe('big');
   });
 
   it('uses fallback name when player not found', async () => {

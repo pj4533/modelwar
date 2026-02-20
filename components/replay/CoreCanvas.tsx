@@ -2,11 +2,27 @@
 
 import { useRef, useEffect } from 'react';
 
-const COLS = 280;
-const ROWS = 198;
-const CELL_SIZE = 2;
-const WIDTH = COLS * CELL_SIZE;
-const HEIGHT = ROWS * CELL_SIZE;
+interface GridDimensions {
+  cols: number;
+  rows: number;
+  cellSize: number;
+}
+
+function computeGrid(coreSize: number): GridDimensions {
+  if (coreSize === 55440) {
+    return { cols: 280, rows: 198, cellSize: 2 };
+  }
+  if (coreSize === 8000) {
+    return { cols: 100, rows: 80, cellSize: 5 };
+  }
+  if (coreSize === 1000000) {
+    return { cols: 1000, rows: 1000, cellSize: 1 };
+  }
+  // Fallback: try to make a reasonable grid
+  const cols = Math.ceil(Math.sqrt(coreSize * 1.4));
+  const rows = Math.ceil(coreSize / cols);
+  return { cols, rows, cellSize: 3 };
+}
 
 // Color palette [R, G, B]
 const COLORS = {
@@ -22,11 +38,19 @@ const COLORS = {
 interface CoreCanvasProps {
   territoryMap: Uint8Array;
   activityMap: Uint8Array;
+  coreSize?: number;
 }
 
-export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProps) {
+export default function CoreCanvas({ territoryMap, activityMap, coreSize = 55440 }: CoreCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageDataRef = useRef<ImageData | null>(null);
+  const gridRef = useRef<GridDimensions>(computeGrid(coreSize));
+
+  // Update grid when coreSize changes
+  useEffect(() => {
+    gridRef.current = computeGrid(coreSize);
+    imageDataRef.current = null; // Reset so it's recreated
+  }, [coreSize]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,13 +58,20 @@ export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProp
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (!imageDataRef.current) {
-      imageDataRef.current = ctx.createImageData(WIDTH, HEIGHT);
+    const { cols, rows, cellSize } = gridRef.current;
+    const width = cols * cellSize;
+    const height = rows * cellSize;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    if (!imageDataRef.current || imageDataRef.current.width !== width || imageDataRef.current.height !== height) {
+      imageDataRef.current = ctx.createImageData(width, height);
     }
 
     const data = imageDataRef.current.data;
 
-    for (let i = 0; i < COLS * ROWS; i++) {
+    for (let i = 0; i < cols * rows; i++) {
       const territory = territoryMap[i];
       const activity = activityMap[i];
 
@@ -62,12 +93,12 @@ export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProp
         else color = COLORS.empty;
       }
 
-      const col = i % COLS;
-      const row = Math.floor(i / COLS);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
 
-      for (let dy = 0; dy < CELL_SIZE; dy++) {
-        for (let dx = 0; dx < CELL_SIZE; dx++) {
-          const px = (row * CELL_SIZE + dy) * WIDTH + (col * CELL_SIZE + dx);
+      for (let dy = 0; dy < cellSize; dy++) {
+        for (let dx = 0; dx < cellSize; dx++) {
+          const px = (row * cellSize + dy) * width + (col * cellSize + dx);
           const offset = px * 4;
           data[offset] = color[0];
           data[offset + 1] = color[1];
@@ -78,14 +109,18 @@ export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProp
     }
 
     ctx.putImageData(imageDataRef.current, 0, 0);
-  }, [territoryMap, activityMap]);
+  }, [territoryMap, activityMap, coreSize]);
+
+  const { cols, rows, cellSize } = gridRef.current;
+  const width = cols * cellSize;
+  const height = rows * cellSize;
 
   return (
     <div className="replay-canvas-container">
       <canvas
         ref={canvasRef}
-        width={WIDTH}
-        height={HEIGHT}
+        width={width}
+        height={height}
         style={{ width: '100%', height: 'auto', display: 'block' }}
       />
     </div>

@@ -26,6 +26,7 @@ export async function GET(
       result: battle.result,
       rounds: battle.rounds,
       round_results: battle.round_results,
+      hill: battle.hill,
       score: {
         challenger_wins: battle.challenger_wins,
         defender_wins: battle.defender_wins,

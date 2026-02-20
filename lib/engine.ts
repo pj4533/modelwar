@@ -1,12 +1,7 @@
 import { corewar } from 'corewar';
 import { mulberry32 } from './prng';
-
-const CORE_SIZE = 55440;
-const MAX_CYCLES = 500000;
-const MAX_LENGTH = 200;
-const MAX_TASKS = 10000;
-const MIN_SEPARATION = 200;
-const NUM_ROUNDS = 5;
+import { HILLS, MAX_WARRIOR_LENGTH } from './hills';
+import type { HillConfig } from './hills';
 
 export interface ParseResult {
   success: boolean;
@@ -28,7 +23,7 @@ export interface BattleResult {
   overallResult: 'challenger_win' | 'defender_win' | 'tie';
 }
 
-export function parseWarrior(redcode: string): ParseResult {
+export function parseWarrior(redcode: string, maxLength: number = MAX_WARRIOR_LENGTH): ParseResult {
   const result = corewar.parse(redcode);
 
   const errors = result.messages
@@ -39,10 +34,10 @@ export function parseWarrior(redcode: string): ParseResult {
     (t) => t.category === 'OPCODE'
   ).length;
 
-  if (result.success && instructionCount > MAX_LENGTH) {
+  if (result.success && instructionCount > maxLength) {
     return {
       success: false,
-      errors: [`Warrior exceeds maximum length of ${MAX_LENGTH} instructions (has ${instructionCount})`],
+      errors: [`Warrior exceeds maximum length of ${maxLength} instructions (has ${instructionCount})`],
       instructionCount,
     };
   }
@@ -54,7 +49,9 @@ export function parseWarrior(redcode: string): ParseResult {
   };
 }
 
-export function runBattle(challengerRedcode: string, defenderRedcode: string): BattleResult {
+export function runBattle(challengerRedcode: string, defenderRedcode: string, hill?: HillConfig): BattleResult {
+  const config = hill ?? HILLS.big;
+
   const challengerParsed = corewar.parse(challengerRedcode);
   const defenderParsed = corewar.parse(defenderRedcode);
 
@@ -71,15 +68,15 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   const singleRules = {
     rounds: 1,
     options: {
-      coresize: CORE_SIZE,
-      maximumCycles: MAX_CYCLES,
-      instructionLimit: MAX_LENGTH,
-      maxTasks: MAX_TASKS,
-      minSeparation: MIN_SEPARATION,
+      coresize: config.coreSize,
+      maximumCycles: config.maxCycles,
+      instructionLimit: config.maxLength,
+      maxTasks: config.maxTasks,
+      minSeparation: config.minSeparation,
     },
   };
 
-  for (let i = 0; i < NUM_ROUNDS; i++) {
+  for (let i = 0; i < config.numRounds; i++) {
     const seed = Math.floor(Math.random() * 2147483647);
     const originalRandom = Math.random;
     Math.random = mulberry32(seed);
@@ -135,4 +132,10 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 }
 
-export { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS };
+// Backward-compatible constant exports derived from Big Hill
+export const CORE_SIZE = HILLS.big.coreSize;
+export const MAX_CYCLES = HILLS.big.maxCycles;
+export const MAX_LENGTH = HILLS.big.maxLength;
+export const MAX_TASKS = HILLS.big.maxTasks;
+export const MIN_SEPARATION = HILLS.big.minSeparation;
+export const NUM_ROUNDS = HILLS.big.numRounds;

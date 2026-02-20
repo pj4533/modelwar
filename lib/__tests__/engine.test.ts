@@ -4,6 +4,7 @@ jest.mock('../prng');
 import { corewar } from 'corewar';
 import { parseWarrior, runBattle } from '../engine';
 import { mulberry32 } from '../prng';
+import type { HillConfig } from '../hills';
 
 const mockParse = corewar.parse as jest.Mock;
 const mockRunMatch = corewar.runMatch as jest.Mock;
@@ -68,16 +69,38 @@ describe('parseWarrior', () => {
     ]);
   });
 
-  it('fails when instruction count exceeds MAX_LENGTH (200)', () => {
-    mockParse.mockReturnValueOnce(successParse(201));
+  it('fails when instruction count exceeds MAX_WARRIOR_LENGTH (1000)', () => {
+    mockParse.mockReturnValueOnce(successParse(1001));
 
     const result = parseWarrior('LONG WARRIOR');
 
     expect(result.success).toBe(false);
     expect(result.errors).toEqual([
-      'Warrior exceeds maximum length of 200 instructions (has 201)',
+      'Warrior exceeds maximum length of 1000 instructions (has 1001)',
     ]);
-    expect(result.instructionCount).toBe(201);
+    expect(result.instructionCount).toBe(1001);
+  });
+
+  it('fails when instruction count exceeds a custom maxLength', () => {
+    mockParse.mockReturnValueOnce(successParse(150));
+
+    const result = parseWarrior('LONG WARRIOR', 100);
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual([
+      'Warrior exceeds maximum length of 100 instructions (has 150)',
+    ]);
+    expect(result.instructionCount).toBe(150);
+  });
+
+  it('succeeds when instruction count is within a custom maxLength', () => {
+    mockParse.mockReturnValueOnce(successParse(80));
+
+    const result = parseWarrior('SHORT WARRIOR', 100);
+
+    expect(result.success).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.instructionCount).toBe(80);
   });
 });
 
@@ -274,5 +297,78 @@ describe('runBattle', () => {
       { round: 4, winner: 'challenger', seed: expect.any(Number) },
       { round: 5, winner: 'defender', seed: expect.any(Number) },
     ]);
+  });
+
+  it('passes custom hill config options to corewar.runMatch', () => {
+    setupValidParse();
+
+    const customHill: HillConfig = {
+      slug: 'test-hill',
+      name: 'Test Hill',
+      description: 'A test hill with custom settings',
+      coreSize: 8000,
+      maxCycles: 80000,
+      maxTasks: 8000,
+      maxLength: 100,
+      minSeparation: 100,
+      numRounds: 3,
+    };
+
+    // Provide mock results for 3 rounds (matching customHill.numRounds)
+    for (let i = 0; i < 3; i++) {
+      mockRunMatch.mockReturnValueOnce({
+        rounds: 1,
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+      });
+    }
+
+    const result = runBattle('CHALLENGER', 'DEFENDER', customHill);
+
+    // Should run exactly numRounds rounds from the custom config
+    expect(mockRunMatch).toHaveBeenCalledTimes(3);
+    expect(result.rounds).toHaveLength(3);
+
+    // Verify every call used the custom hill's options
+    for (let i = 0; i < 3; i++) {
+      const callRules = mockRunMatch.mock.calls[i][0];
+      expect(callRules).toEqual({
+        rounds: 1,
+        options: {
+          coresize: 8000,
+          maximumCycles: 80000,
+          instructionLimit: 100,
+          maxTasks: 8000,
+          minSeparation: 100,
+        },
+      });
+    }
+  });
+
+  it('uses Big Hill defaults when no hill config is provided', () => {
+    setupValidParse();
+
+    for (let i = 0; i < 5; i++) {
+      mockRunMatch.mockReturnValueOnce({
+        rounds: 1,
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+      });
+    }
+
+    runBattle('CHALLENGER', 'DEFENDER');
+
+    // Default is Big Hill: 5 rounds with Big Hill options
+    expect(mockRunMatch).toHaveBeenCalledTimes(5);
+
+    const callRules = mockRunMatch.mock.calls[0][0];
+    expect(callRules).toEqual({
+      rounds: 1,
+      options: {
+        coresize: 55440,
+        maximumCycles: 500000,
+        instructionLimit: 200,
+        maxTasks: 10000,
+        minSeparation: 200,
+      },
+    });
   });
 });

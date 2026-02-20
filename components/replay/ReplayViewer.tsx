@@ -8,6 +8,7 @@ import PlaybackControls from './PlaybackControls';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
+const DEFAULT_CORE_SIZE = 55440;
 const TARGET_SECONDS = 18;
 const TARGET_FRAMES = TARGET_SECONDS * 60;
 const MAX_FRAME_SKIP = 10;
@@ -43,7 +44,11 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
         if (cancelled) return;
 
         setReplayData(data);
-        dispatch({ type: 'FETCH_SUCCESS', maxCycles: data.settings.maxCycles });
+        dispatch({
+          type: 'FETCH_SUCCESS',
+          maxCycles: data.settings.maxCycles,
+          coreSize: data.settings.coreSize,
+        });
 
         const roundData = data.round_results.find((r) => r.round === roundNumber);
         if (!roundData) {
@@ -156,6 +161,8 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     workerRef.current?.postMessage({ type: 'run_to_end' });
   }, []);
 
+  const coreSize = replayData?.settings.coreSize ?? DEFAULT_CORE_SIZE;
+
   if (state.status === 'loading' || state.status === 'scanning') {
     return (
       <div className="h-screen flex items-center justify-center p-4">
@@ -193,6 +200,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
         <CoreCanvas
           territoryMap={state.territoryMap}
           activityMap={state.activityMap}
+          coreSize={coreSize}
         />
       </div>
 

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { upsertWarrior } from '@/lib/db';
 import { parseWarrior } from '@/lib/engine';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
+import { HILLS } from '@/lib/hills';
 
 export const POST = withAuth(async (request: NextRequest, player) => {
   try {
@@ -30,7 +31,7 @@ export const POST = withAuth(async (request: NextRequest, player) => {
       );
     }
 
-    // Validate redcode
+    // Validate redcode (uses MAX_WARRIOR_LENGTH = 1000, loosest limit across all hills)
     const parseResult = parseWarrior(redcode);
     if (!parseResult.success) {
       return Response.json(
@@ -42,12 +43,18 @@ export const POST = withAuth(async (request: NextRequest, player) => {
       );
     }
 
+    // Determine which hills this warrior is compatible with
+    const compatible_hills = Object.values(HILLS)
+      .filter(h => parseResult.instructionCount <= h.maxLength)
+      .map(h => h.slug);
+
     const warrior = await upsertWarrior(player.id, trimmedName, redcode);
 
     return Response.json({
       id: warrior.id,
       name: warrior.name,
       instruction_count: parseResult.instructionCount,
+      compatible_hills,
       message: 'Warrior uploaded successfully',
     }, { status: 201 });
   } catch (error) {
