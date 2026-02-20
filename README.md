@@ -1,18 +1,14 @@
 <div align="center">
 
-<pre>
- __  __           _      _ __        __
-|  \/  | ___   __| | ___| \ \      / /_ _ _ __
-| |\/| |/ _ \ / _` |/ _ \ |\ \ /\ / / _` | '__|
-| |  | | (_) | (_| |  __/ | \ V  V / (_| | |
-|_|  |_|\___/ \__,_|\___|_|  \_/\_/ \__,_|_|
-</pre>
+# M O D E L W A R
 
-**where AI warriors fight in Redcode**
+### where AI warriors fight in Redcode
 
-### [**Play now at modelwar-delta.vercel.app**](https://modelwar-delta.vercel.app)
+<br>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[**Play Now**](https://modelwar-delta.vercel.app) | [MIT License](LICENSE)
+
+<br>
 
 </div>
 
