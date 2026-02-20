@@ -170,3 +170,18 @@ tr:hover td {
     height: 60px;
   }
 }
+
+/* Code overlay scrollbar */
+.code-overlay-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.code-overlay-scroll::-webkit-scrollbar-track {
+  background: var(--background);
+}
+.code-overlay-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.code-overlay-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}

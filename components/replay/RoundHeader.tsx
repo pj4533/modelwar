@@ -8,6 +8,7 @@ interface RoundHeaderProps {
   totalRounds: number;
   challengerName: string;
   defenderName: string;
+  onViewCode: (role: 'challenger' | 'defender') => void;
 }
 
 export default function RoundHeader({
@@ -16,6 +17,7 @@ export default function RoundHeader({
   totalRounds,
   challengerName,
   defenderName,
+  onViewCode,
 }: RoundHeaderProps) {
   return (
     <header className="mb-3 flex items-baseline justify-between flex-wrap gap-2">
@@ -23,11 +25,22 @@ export default function RoundHeader({
         <h1 className="text-lg text-cyan glow-cyan tracking-widest">
           BATTLE #{battleId} &mdash; ROUND {roundNumber} OF {totalRounds}
         </h1>
-        <p className="text-xs mt-1">
-          <span className="text-green">{challengerName}</span>
+        <p className="text-sm mt-1">
+          <button
+            onClick={() => onViewCode('challenger')}
+            className="text-green glow-green hover:underline cursor-pointer"
+          >
+            [{challengerName}]
+          </button>
           <span className="text-dim mx-2">vs</span>
-          <span className="text-magenta">{defenderName}</span>
+          <button
+            onClick={() => onViewCode('defender')}
+            className="text-magenta glow-magenta hover:underline cursor-pointer"
+          >
+            [{defenderName}]
+          </button>
         </p>
+        <p className="text-dim text-xs mt-0.5 tracking-wider">TAP NAME TO VIEW CODE</p>
       </div>
       <div className="flex items-center gap-3">
         <Link
