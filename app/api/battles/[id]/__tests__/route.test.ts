@@ -64,6 +64,7 @@ describe('GET /api/battles/[id]', () => {
     expect(data.id).toBe(1);
     expect(data.result).toBe('challenger_win');
     expect(data.rounds).toBe(5);
+    expect(data.round_results).toBeNull();
     expect(data.score).toEqual({ challenger_wins: 3, defender_wins: 1, ties: 1 });
     expect(data.challenger.id).toBe(1);
     expect(data.challenger.name).toBe('Challenger');

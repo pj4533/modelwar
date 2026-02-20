@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
 import { handleRouteError } from '@/lib/api-utils';
+import { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION } from '@/lib/engine';
 
 export async function GET(
   _request: NextRequest,
@@ -18,34 +19,36 @@ export async function GET(
       return Response.json({ error: 'Battle not found' }, { status: 404 });
     }
 
+    if (!battle.challenger_redcode || !battle.defender_redcode) {
+      return Response.json(
+        { error: 'Replay not available for this battle' },
+        { status: 404 }
+      );
+    }
+
     const challenger = await getPlayerById(battle.challenger_id);
     const defender = await getPlayerById(battle.defender_id);
 
     return Response.json({
-      id: battle.id,
-      result: battle.result,
-      rounds: battle.rounds,
-      round_results: battle.round_results,
-      score: {
-        challenger_wins: battle.challenger_wins,
-        defender_wins: battle.defender_wins,
-        ties: battle.ties,
-      },
+      battle_id: battle.id,
       challenger: {
-        id: battle.challenger_id,
-        name: challenger?.name,
-        elo_before: battle.challenger_elo_before,
-        elo_after: battle.challenger_elo_after,
+        name: challenger?.name ?? `Player #${battle.challenger_id}`,
+        redcode: battle.challenger_redcode,
       },
       defender: {
-        id: battle.defender_id,
-        name: defender?.name,
-        elo_before: battle.defender_elo_before,
-        elo_after: battle.defender_elo_after,
+        name: defender?.name ?? `Player #${battle.defender_id}`,
+        redcode: battle.defender_redcode,
       },
-      created_at: battle.created_at,
+      round_results: battle.round_results,
+      settings: {
+        coreSize: CORE_SIZE,
+        maxCycles: MAX_CYCLES,
+        maxLength: MAX_LENGTH,
+        maxTasks: MAX_TASKS,
+        minSeparation: MIN_SEPARATION,
+      },
     });
   } catch (error) {
-    return handleRouteError('Battle fetch error', error);
+    return handleRouteError('Replay fetch error', error);
   }
 }

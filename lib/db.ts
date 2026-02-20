@@ -47,6 +47,12 @@ export interface Warrior {
   updated_at: Date;
 }
 
+export interface RoundResultRecord {
+  round: number;
+  winner: 'challenger' | 'defender' | 'tie';
+  seed: number;
+}
+
 export interface Battle {
   id: number;
   challenger_id: number;
@@ -62,6 +68,9 @@ export interface Battle {
   defender_elo_before: number;
   challenger_elo_after: number;
   defender_elo_after: number;
+  challenger_redcode: string | null;
+  defender_redcode: string | null;
+  round_results: RoundResultRecord[] | null;
   created_at: Date;
 }
 
@@ -183,8 +192,9 @@ export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>, cl
       result, rounds,
       challenger_wins, defender_wins, ties,
       challenger_elo_before, defender_elo_before,
-      challenger_elo_after, defender_elo_after
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      challenger_elo_after, defender_elo_after,
+      challenger_redcode, defender_redcode, round_results
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *`;
   const params = [
     battle.challenger_id, battle.defender_id,
@@ -193,6 +203,8 @@ export async function createBattle(battle: Omit<Battle, 'id' | 'created_at'>, cl
     battle.challenger_wins, battle.defender_wins, battle.ties,
     battle.challenger_elo_before, battle.defender_elo_before,
     battle.challenger_elo_after, battle.defender_elo_after,
+    battle.challenger_redcode, battle.defender_redcode,
+    battle.round_results ? JSON.stringify(battle.round_results) : null,
   ];
 
   if (client) {

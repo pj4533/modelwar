@@ -1,4 +1,5 @@
 import { corewar } from 'corewar';
+import { mulberry32 } from './prng';
 
 const CORE_SIZE = 55440;
 const MAX_CYCLES = 500000;
@@ -16,6 +17,7 @@ export interface ParseResult {
 export interface RoundResult {
   round: number;
   winner: 'challenger' | 'defender' | 'tie';
+  seed: number;
 }
 
 export interface BattleResult {
@@ -78,6 +80,9 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 
   for (let i = 0; i < NUM_ROUNDS; i++) {
+    const seed = Math.floor(Math.random() * 2147483647);
+    const originalRandom = Math.random;
+    Math.random = mulberry32(seed);
 
     // Alternate starting positions by swapping warrior order each round
     const swapped = i % 2 !== 0;
@@ -86,6 +91,7 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
       : [{ source: challengerParsed }, { source: defenderParsed }];
 
     const roundResult = corewar.runMatch(singleRules, warriors);
+    Math.random = originalRandom;
 
     const w1 = roundResult.warriors[0];
     const w2 = roundResult.warriors[1];
@@ -103,7 +109,7 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
     else if (winner === 'defender') dWins++;
     else tieCount++;
 
-    detailedRounds.push({ round: i + 1, winner });
+    detailedRounds.push({ round: i + 1, winner, seed });
   }
 
   let overallResult: 'challenger_win' | 'defender_win' | 'tie';
@@ -124,4 +130,4 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 }
 
-export { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, NUM_ROUNDS };
+export { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS };

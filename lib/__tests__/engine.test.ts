@@ -1,14 +1,20 @@
 jest.mock('corewar');
+jest.mock('../prng');
 
 import { corewar } from 'corewar';
 import { parseWarrior, runBattle } from '../engine';
+import { mulberry32 } from '../prng';
 
 const mockParse = corewar.parse as jest.Mock;
 const mockRunMatch = corewar.runMatch as jest.Mock;
+const mockMulberry32 = mulberry32 as jest.MockedFunction<typeof mulberry32>;
 
 beforeEach(() => {
   mockParse.mockReset();
   mockRunMatch.mockReset();
+  mockMulberry32.mockReset();
+  // Default: return a function that behaves like Math.random
+  mockMulberry32.mockReturnValue(() => 0.5);
 });
 
 function successParse(instructionCount = 5) {
@@ -155,6 +161,42 @@ describe('runBattle', () => {
     expect(() => runBattle('VALID', 'INVALID')).toThrow('Cannot battle with invalid warriors');
   });
 
+  it('includes a seed in each round result', () => {
+    setupValidParse();
+
+    for (let i = 0; i < 5; i++) {
+      mockRunMatch.mockReturnValueOnce({
+        rounds: 1,
+        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+      });
+    }
+
+    const result = runBattle('CHALLENGER', 'DEFENDER');
+
+    for (const round of result.rounds) {
+      expect(round.seed).toBeDefined();
+      expect(typeof round.seed).toBe('number');
+      expect(round.seed).toBeGreaterThanOrEqual(0);
+      expect(round.seed).toBeLessThan(2147483647);
+    }
+  });
+
+  it('uses mulberry32 seeded PRNG for each round', () => {
+    setupValidParse();
+
+    for (let i = 0; i < 5; i++) {
+      mockRunMatch.mockReturnValueOnce({
+        rounds: 1,
+        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+      });
+    }
+
+    runBattle('CHALLENGER', 'DEFENDER');
+
+    // mulberry32 should be called once per round (5 rounds)
+    expect(mockMulberry32).toHaveBeenCalledTimes(5);
+  });
+
   it('alternates warrior positions: even rounds not swapped, odd rounds swapped', () => {
     setupValidParse();
 
@@ -226,11 +268,11 @@ describe('runBattle', () => {
     expect(result.ties).toBe(1);
     expect(result.overallResult).toBe('tie');
     expect(result.rounds).toEqual([
-      { round: 1, winner: 'challenger' },
-      { round: 2, winner: 'defender' },
-      { round: 3, winner: 'tie' },
-      { round: 4, winner: 'challenger' },
-      { round: 5, winner: 'defender' },
+      { round: 1, winner: 'challenger', seed: expect.any(Number) },
+      { round: 2, winner: 'defender', seed: expect.any(Number) },
+      { round: 3, winner: 'tie', seed: expect.any(Number) },
+      { round: 4, winner: 'challenger', seed: expect.any(Number) },
+      { round: 5, winner: 'defender', seed: expect.any(Number) },
     ]);
   });
 });

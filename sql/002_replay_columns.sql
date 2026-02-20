@@ -1,0 +1,3 @@
+ALTER TABLE battles ADD COLUMN IF NOT EXISTS challenger_redcode TEXT;
+ALTER TABLE battles ADD COLUMN IF NOT EXISTS defender_redcode TEXT;
+ALTER TABLE battles ADD COLUMN IF NOT EXISTS round_results JSONB;
