@@ -43,6 +43,9 @@ export function makeBattle(overrides: Partial<Battle> = {}): Battle {
     defender_elo_before: 1200,
     challenger_elo_after: 1216,
     defender_elo_after: 1184,
+    challenger_redcode: null,
+    defender_redcode: null,
+    round_results: null,
     created_at: new Date('2025-01-01'),
     ...overrides,
   };

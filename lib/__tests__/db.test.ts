@@ -190,7 +190,34 @@ describe('Battle queries', () => {
         input.challenger_wins, input.defender_wins, input.ties,
         input.challenger_elo_before, input.defender_elo_before,
         input.challenger_elo_after, input.defender_elo_after,
+        input.challenger_redcode, input.defender_redcode,
+        null,
       ]
+    );
+  });
+
+  it('createBattle: serializes round_results as JSON', async () => {
+    const roundResults = [
+      { round: 1, winner: 'challenger' as const, seed: 12345 },
+      { round: 2, winner: 'defender' as const, seed: 67890 },
+    ];
+    const battle = makeBattle({
+      challenger_redcode: 'MOV 0, 1',
+      defender_redcode: 'DAT #0, #0',
+      round_results: roundResults,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [battle] });
+
+    const { id, created_at, ...input } = battle;
+    await db.createBattle(input);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO battles'),
+      expect.arrayContaining([
+        'MOV 0, 1',
+        'DAT #0, #0',
+        JSON.stringify(roundResults),
+      ])
     );
   });
 

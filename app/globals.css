@@ -109,3 +109,33 @@ tr:hover td {
 .pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
 }
+
+/* Replay visualization */
+.replay-canvas-container {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+  line-height: 0;
+}
+
+.replay-canvas-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(0, 255, 204, 0.05);
+}
+
+.speed-btn-active {
+  background: rgba(0, 255, 204, 0.15);
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.progress-glow {
+  box-shadow: 0 0 6px rgba(0, 255, 204, 0.4);
+}

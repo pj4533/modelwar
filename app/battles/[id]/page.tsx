@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getBattleById, getPlayerById } from '@/lib/db';
+import type { RoundResultRecord } from '@/lib/db';
 
 interface BattleDetail {
   id: number;
@@ -14,6 +15,7 @@ interface BattleDetail {
   challenger_elo_after: number;
   defender_elo_before: number;
   defender_elo_after: number;
+  round_results: RoundResultRecord[] | null;
   created_at: string;
 }
 
@@ -43,6 +45,7 @@ async function getBattle(id: number): Promise<{ battle: BattleDetail | null; cha
         challenger_elo_after: battle.challenger_elo_after,
         defender_elo_before: battle.defender_elo_before,
         defender_elo_after: battle.defender_elo_after,
+        round_results: battle.round_results,
         created_at: String(battle.created_at),
       },
       challenger: challenger ? { name: challenger.name } : null,
@@ -120,6 +123,44 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
           Score: {battle.challenger_wins} - {battle.defender_wins} - {battle.ties}
         </p>
       </div>
+
+      {/* Per-round results */}
+      {battle.round_results && battle.round_results.length > 0 && (
+        <div className="border border-border mb-8">
+          <div className="px-4 py-2 border-b border-border">
+            <p className="text-xs text-cyan uppercase tracking-wider">Rounds</p>
+          </div>
+          {battle.round_results.map((round) => {
+            const roundColor =
+              round.winner === 'challenger'
+                ? 'text-green'
+                : round.winner === 'defender'
+                ? 'text-magenta'
+                : 'text-yellow';
+            const roundLabel =
+              round.winner === 'challenger'
+                ? 'CHALLENGER'
+                : round.winner === 'defender'
+                ? 'DEFENDER'
+                : 'TIE';
+            return (
+              <div
+                key={round.round}
+                className="flex items-center justify-between px-4 py-3 border-b border-border last:border-b-0"
+              >
+                <span className="text-dim text-sm">ROUND {round.round}</span>
+                <span className={`text-sm font-bold ${roundColor}`}>{roundLabel}</span>
+                <Link
+                  href={`/battles/${battle.id}/rounds/${round.round}`}
+                  className="text-cyan text-xs hover:underline tracking-wider"
+                >
+                  WATCH REPLAY
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Combatants */}
       <div className="grid grid-cols-2 gap-4 mb-8">

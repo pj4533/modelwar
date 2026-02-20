@@ -102,6 +102,9 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         defender_elo_before: defender.elo_rating,
         challenger_elo_after: newRatingA,
         defender_elo_after: newRatingB,
+        challenger_redcode: challengerWarrior.redcode,
+        defender_redcode: defenderWarrior.redcode,
+        round_results: battleResult.rounds,
       }, client);
     });
 

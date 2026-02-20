@@ -58,7 +58,7 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
     .mockResolvedValueOnce(challengerWarrior)
     .mockResolvedValueOnce(defenderWarrior);
   mockRunBattle.mockReturnValue({
-    rounds: [{ round: 1, winner: 'challenger' }],
+    rounds: [{ round: 1, winner: 'challenger', seed: 12345 }],
     challengerWins: cWins,
     defenderWins: dWins,
     ties: tCount,
