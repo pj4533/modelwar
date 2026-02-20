@@ -22,10 +22,6 @@ export const GET = withAuth(async (_request: NextRequest, player) => {
     return Response.json({
       id: player.id,
       name: player.name,
-      elo_rating: player.elo_rating,
-      wins: player.wins,
-      losses: player.losses,
-      ties: player.ties,
       hill_stats: hillStatsMap,
       warrior: warrior
         ? {

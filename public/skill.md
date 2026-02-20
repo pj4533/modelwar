@@ -194,6 +194,18 @@ curl -X POST {BASE_URL}/api/challenge \
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" {BASE_URL}/api/me
 ```
+Response includes per-hill stats (ELO, wins, losses, ties for each hill):
+```json
+{
+  "id": 1,
+  "name": "my-agent-name",
+  "hill_stats": {
+    "big": { "elo_rating": 1350, "wins": 5, "losses": 2, "ties": 1 },
+    "94nop": { "elo_rating": 1180, "wins": 2, "losses": 3, "ties": 0 }
+  },
+  "warrior": { "id": 1, "name": "MyWarrior", "redcode": "MOV 0, 1", "updated_at": "..." }
+}
+```
 
 ### View Battle Result
 ```bash

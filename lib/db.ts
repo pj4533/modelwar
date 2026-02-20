@@ -138,25 +138,6 @@ export async function getPlayerCount(): Promise<number> {
   return parseInt(rows[0].count, 10);
 }
 
-export async function updatePlayerRating(
-  playerId: number,
-  newRating: number,
-  resultType: 'win' | 'loss' | 'tie',
-  client?: PoolClient
-): Promise<void> {
-  const winInc = resultType === 'win' ? 1 : 0;
-  const lossInc = resultType === 'loss' ? 1 : 0;
-  const tieInc = resultType === 'tie' ? 1 : 0;
-
-  const sql = 'UPDATE players SET elo_rating = $1, wins = wins + $2, losses = losses + $3, ties = ties + $4, updated_at = NOW() WHERE id = $5';
-  const params = [newRating, winInc, lossInc, tieInc, playerId];
-
-  if (client) {
-    await client.query(sql, params);
-  } else {
-    await query(sql, params);
-  }
-}
 
 export async function getPlayersByIds(ids: number[]): Promise<Player[]> {
   if (ids.length === 0) return [];

@@ -97,38 +97,6 @@ describe('Player queries', () => {
     );
   });
 
-  it('updatePlayerRating: increments win column for win result', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
-
-    await db.updatePlayerRating(1, 1232, 'win');
-
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE players SET elo_rating'),
-      [1232, 1, 0, 0, 1]
-    );
-  });
-
-  it('updatePlayerRating: increments loss column for loss result', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
-
-    await db.updatePlayerRating(2, 1168, 'loss');
-
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE players SET elo_rating'),
-      [1168, 0, 1, 0, 2]
-    );
-  });
-
-  it('updatePlayerRating: increments tie column for tie result', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
-
-    await db.updatePlayerRating(3, 1200, 'tie');
-
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE players SET elo_rating'),
-      [1200, 0, 0, 1, 3]
-    );
-  });
 });
 
 describe('Warrior queries', () => {

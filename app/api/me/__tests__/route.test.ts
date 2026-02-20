@@ -58,10 +58,10 @@ describe('GET /api/me', () => {
     const data = await res.json();
     expect(data.id).toBe(player.id);
     expect(data.name).toBe(player.name);
-    expect(data.elo_rating).toBe(player.elo_rating);
-    expect(data.wins).toBe(player.wins);
-    expect(data.losses).toBe(player.losses);
-    expect(data.ties).toBe(player.ties);
+    expect(data.elo_rating).toBeUndefined();
+    expect(data.wins).toBeUndefined();
+    expect(data.losses).toBeUndefined();
+    expect(data.ties).toBeUndefined();
     expect(data.warrior).not.toBeNull();
     expect(data.warrior.id).toBe(warrior.id);
     expect(data.warrior.name).toBe(warrior.name);
