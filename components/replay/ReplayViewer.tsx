@@ -8,7 +8,7 @@ import PlaybackControls from './PlaybackControls';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
-const TARGET_SECONDS = 30;
+const TARGET_SECONDS = 18;
 const TARGET_FRAMES = TARGET_SECONDS * 60;
 const MAX_FRAME_SKIP = 10;
 
