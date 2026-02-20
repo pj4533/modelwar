@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export function ClickableRow({ href, children, className }: {
@@ -15,5 +16,21 @@ export function ClickableRow({ href, children, className }: {
     >
       {children}
     </tr>
+  );
+}
+
+export function ClickableLink({ href, children, className }: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={className}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </Link>
   );
 }

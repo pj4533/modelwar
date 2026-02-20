@@ -6,7 +6,7 @@ import {
   getPlayersByIds,
 } from '@/lib/db';
 import type { Battle } from '@/lib/db';
-import { ClickableRow } from '@/app/components/ClickableRow';
+import { ClickableRow, ClickableLink } from '@/app/components/ClickableRow';
 import { buildEloHistory, asciiSparkline, getPlayerResult } from '@/lib/player-utils';
 
 interface PlayerData {
@@ -195,13 +195,12 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                     <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
                       <td className="text-cyan">#{battle.id}</td>
                       <td>
-                        <Link
+                        <ClickableLink
                           href={`/players/${opponentId}`}
                           className="text-cyan hover:underline"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           {playerNames[opponentId] || `Player #${opponentId}`}
-                        </Link>
+                        </ClickableLink>
                       </td>
                       <td className={resultColor}>{result.toUpperCase()}</td>
                       <td className="text-dim">
