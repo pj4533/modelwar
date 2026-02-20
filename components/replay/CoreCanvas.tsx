@@ -86,7 +86,7 @@ export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProp
         ref={canvasRef}
         width={WIDTH}
         height={HEIGHT}
-        style={{ maxWidth: '100%', maxHeight: '100%', height: 'auto', display: 'block' }}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
       />
     </div>
   );

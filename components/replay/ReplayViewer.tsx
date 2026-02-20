@@ -8,8 +8,9 @@ import PlaybackControls from './PlaybackControls';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
-const TARGET_SECONDS = 15;
+const TARGET_SECONDS = 30;
 const TARGET_FRAMES = TARGET_SECONDS * 60;
+const MAX_FRAME_SKIP = 10;
 
 interface ReplayViewerProps {
   battleId: number;
@@ -22,6 +23,8 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
   const workerRef = useRef<Worker | null>(null);
   const rafRef = useRef<number | null>(null);
   const cyclesPerFrameRef = useRef<number>(100);
+  const frameSkipRef = useRef<number>(1);
+  const frameCountRef = useRef<number>(0);
 
   // Fetch replay data and initialize worker
   useEffect(() => {
@@ -60,7 +63,15 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
             worker.postMessage({ type: 'prescan' });
           } else if (msg.type === 'prescan_done') {
             const endCycle = msg.endCycle as number;
-            cyclesPerFrameRef.current = Math.max(1, Math.ceil(endCycle / TARGET_FRAMES));
+            if (endCycle <= TARGET_FRAMES) {
+              // Short battle: 1 cycle per step, skip frames to stretch duration
+              cyclesPerFrameRef.current = 1;
+              frameSkipRef.current = Math.min(MAX_FRAME_SKIP, Math.max(1, Math.round(TARGET_FRAMES / endCycle)));
+            } else {
+              // Normal battle: multiple cycles per frame
+              cyclesPerFrameRef.current = Math.ceil(endCycle / TARGET_FRAMES);
+              frameSkipRef.current = 1;
+            }
             dispatch({ type: 'PRESCAN_DONE', endCycle });
           } else if (msg.type === 'events') {
             dispatch({
@@ -116,8 +127,10 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
     function tick() {
       if (!workerRef.current) return;
-
-      workerRef.current.postMessage({ type: 'step', count: cyclesPerFrameRef.current });
+      frameCountRef.current++;
+      if (frameCountRef.current % frameSkipRef.current === 0) {
+        workerRef.current.postMessage({ type: 'step', count: cyclesPerFrameRef.current });
+      }
       rafRef.current = requestAnimationFrame(tick);
     }
 

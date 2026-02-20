@@ -74,8 +74,11 @@ export default function PlaybackControls({
         </div>
 
         {/* Center: cycle counter */}
-        <p className="text-dim text-xs tracking-wider whitespace-nowrap">
-          {formatCycle(state.cycle)}
+        <p className={`text-lg tracking-wider whitespace-nowrap font-mono ${
+          state.status === 'finished' ? 'text-cyan glow-cyan' : 'text-cyan'
+        }`}>
+          CYCLE {formatCycle(state.cycle)}
+          <span className="text-dim"> / {formatCycle(state.endCycle ?? state.maxCycles)}</span>
         </p>
 
         {/* Right: transport controls */}

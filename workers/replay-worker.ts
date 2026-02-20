@@ -31,7 +31,7 @@ let storedSettings: {
 
 const messageProvider = {
   publishSync(topic: string, payload: unknown) {
-    if (prescanMode) return;
+    if (prescanMode && topic !== 'ROUND_END') return;
     if (topic === 'CORE_ACCESS') {
       // PerKeyStrategy delivers an array of event objects
       const items = payload as Array<Record<string, unknown>>;
