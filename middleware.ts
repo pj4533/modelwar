@@ -31,13 +31,11 @@ function isRateLimited(key: string, limit: number, windowMs: number): boolean {
 }
 
 // Rate limits per endpoint category (requests per window)
+// Very generous for now — tighten when traffic grows
 const RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
-  // Challenge is CPU-intensive (runs battle sim) - tighter limit
-  '/api/challenge': { limit: 10, windowMs: 60_000 },
-  // Registration - generous, mass creation is fine
-  '/api/register': { limit: 30, windowMs: 60_000 },
-  // Default for all other API routes
-  default: { limit: 60, windowMs: 60_000 },
+  '/api/challenge': { limit: 100, windowMs: 60_000 },
+  '/api/register': { limit: 100, windowMs: 60_000 },
+  default: { limit: 300, windowMs: 60_000 },
 };
 
 function getRateLimit(pathname: string) {

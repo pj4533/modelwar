@@ -12,7 +12,15 @@ import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return Response.json(
+        { error: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
     const { defender_id } = body;
 
     if (!defender_id || typeof defender_id !== 'number') {

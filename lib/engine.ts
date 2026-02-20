@@ -90,11 +90,16 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
       ? [{ source: defenderParsed }, { source: challengerParsed }]
       : [{ source: challengerParsed }, { source: defenderParsed }];
 
-    const roundResult = corewar.runMatch(singleRules, warriors);
+    // Note: corewar's type definitions say `warriors` but the runtime
+    // MatchResultMapper actually returns `results`. Cast to access it.
+    const roundResult = corewar.runMatch(singleRules, warriors) as unknown as {
+      rounds: number;
+      results: { won: number; drawn: number; lost: number }[];
+    };
     Math.random = originalRandom;
 
-    const w1 = roundResult.warriors[0];
-    const w2 = roundResult.warriors[1];
+    const w1 = roundResult.results[0];
+    const w2 = roundResult.results[1];
 
     let winner: 'challenger' | 'defender' | 'tie';
     if (w1.won > w2.won) {

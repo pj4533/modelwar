@@ -93,11 +93,11 @@ describe('runBattle', () => {
 
     // 5 rounds: challenger wins 3, defender wins 1, tie 1
     mockRunMatch
-      .mockReturnValueOnce({ rounds: 1, warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 1: w1 wins (not swapped → challenger)
-      .mockReturnValueOnce({ rounds: 1, warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 2: w1 wins (swapped → defender)
-      .mockReturnValueOnce({ rounds: 1, warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 3: w1 wins (not swapped → challenger)
-      .mockReturnValueOnce({ rounds: 1, warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }] })  // round 4: tie
-      .mockReturnValueOnce({ rounds: 1, warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] }); // round 5: w1 wins (not swapped → challenger)
+      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 1: w1 wins (not swapped → challenger)
+      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 2: w1 wins (swapped → defender)
+      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 3: w1 wins (not swapped → challenger)
+      .mockReturnValueOnce({ rounds: 1, results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }] })  // round 4: tie
+      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] }); // round 5: w1 wins (not swapped → challenger)
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
@@ -115,7 +115,7 @@ describe('runBattle', () => {
     for (let i = 0; i < 5; i++) {
       mockRunMatch.mockReturnValueOnce({
         rounds: 1,
-        warriors: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
+        results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
       });
     }
 
@@ -135,7 +135,7 @@ describe('runBattle', () => {
     for (let i = 0; i < 5; i++) {
       mockRunMatch.mockReturnValueOnce({
         rounds: 1,
-        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
       });
     }
 
@@ -167,7 +167,7 @@ describe('runBattle', () => {
     for (let i = 0; i < 5; i++) {
       mockRunMatch.mockReturnValueOnce({
         rounds: 1,
-        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
       });
     }
 
@@ -187,7 +187,7 @@ describe('runBattle', () => {
     for (let i = 0; i < 5; i++) {
       mockRunMatch.mockReturnValueOnce({
         rounds: 1,
-        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
       });
     }
 
@@ -203,7 +203,7 @@ describe('runBattle', () => {
     for (let i = 0; i < 5; i++) {
       mockRunMatch.mockReturnValueOnce({
         rounds: 1,
-        warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
       });
     }
 
@@ -238,27 +238,27 @@ describe('runBattle', () => {
     // Round 1 (i=0, not swapped): challenger wins
     mockRunMatch.mockReturnValueOnce({
       rounds: 1,
-      warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
+      results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
     });
     // Round 2 (i=1, swapped): w1 wins → w1 is defender when swapped → defender wins
     mockRunMatch.mockReturnValueOnce({
       rounds: 1,
-      warriors: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
+      results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
     });
     // Round 3 (i=2, not swapped): tie
     mockRunMatch.mockReturnValueOnce({
       rounds: 1,
-      warriors: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
+      results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
     });
     // Round 4 (i=3, swapped): w2 wins → w2 is challenger when swapped → challenger wins
     mockRunMatch.mockReturnValueOnce({
       rounds: 1,
-      warriors: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
+      results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
     });
     // Round 5 (i=4, not swapped): defender wins
     mockRunMatch.mockReturnValueOnce({
       rounds: 1,
-      warriors: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
+      results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
     });
 
     const result = runBattle('C', 'D');
