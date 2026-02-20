@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# playwright
+.playwright-mcp/
+
+# supabase (auto-generated, we use sql/migrations.sql)
+/supabase
