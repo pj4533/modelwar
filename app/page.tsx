@@ -5,6 +5,7 @@ import {
   getRecentBattles as dbGetRecentBattles,
   getPlayersByIds,
 } from '@/lib/db';
+import { ClickableRow } from '@/app/components/ClickableRow';
 
 interface LeaderboardEntry {
   rank: number;
@@ -166,7 +167,7 @@ export default async function Home() {
               </thead>
               <tbody>
                 {leaderboard.map((entry) => (
-                  <tr key={entry.id}>
+                  <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
                     <td className="text-dim">{entry.rank}</td>
                     <td className={entry.rank <= 3 ? 'text-cyan glow-cyan' : ''}>
                       {entry.name}
@@ -177,7 +178,7 @@ export default async function Home() {
                     <td className="text-right text-green">{entry.wins}</td>
                     <td className="text-right text-red">{entry.losses}</td>
                     <td className="text-right text-yellow">{entry.ties}</td>
-                  </tr>
+                  </ClickableRow>
                 ))}
               </tbody>
             </table>
@@ -211,12 +212,8 @@ export default async function Home() {
                 {battles.map((battle) => {
                   const r = resultLabel(battle.result);
                   return (
-                    <tr key={battle.id}>
-                      <td>
-                        <Link href={`/battles/${battle.id}`} className="text-cyan hover:underline">
-                          #{battle.id}
-                        </Link>
-                      </td>
+                    <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
+                      <td className="text-cyan">#{battle.id}</td>
                       <td className={battle.result === 'challenger_win' ? 'text-green' : ''}>
                         {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
                       </td>
@@ -228,7 +225,7 @@ export default async function Home() {
                         {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
                       </td>
                       <td className={r.color}>{r.text}</td>
-                    </tr>
+                    </ClickableRow>
                   );
                 })}
               </tbody>
