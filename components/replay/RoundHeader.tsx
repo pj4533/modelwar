@@ -30,6 +30,12 @@ export default function RoundHeader({
         </p>
       </div>
       <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          className="px-3 py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
+        >
+          HOME
+        </Link>
         {roundNumber > 1 && (
           <Link
             href={`/battles/${battleId}/rounds/${roundNumber - 1}`}
@@ -40,7 +46,7 @@ export default function RoundHeader({
         )}
         <Link
           href={`/battles/${battleId}`}
-          className="text-dim text-xs hover:text-cyan"
+          className="px-3 py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
         >
           BATTLE
         </Link>
