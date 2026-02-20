@@ -8,7 +8,8 @@ import PlaybackControls from './PlaybackControls';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
-const CYCLES_PER_FRAME = 100;
+const TARGET_SECONDS = 15;
+const TARGET_FRAMES = TARGET_SECONDS * 60;
 
 interface ReplayViewerProps {
   battleId: number;
@@ -20,6 +21,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
   const [replayData, setReplayData] = useState<ReplayData | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const rafRef = useRef<number | null>(null);
+  const cyclesPerFrameRef = useRef<number>(100);
 
   // Fetch replay data and initialize worker
   useEffect(() => {
@@ -55,6 +57,11 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
           const msg = e.data;
           if (msg.type === 'initialized') {
             dispatch({ type: 'INITIALIZED' });
+            worker.postMessage({ type: 'prescan' });
+          } else if (msg.type === 'prescan_done') {
+            const endCycle = msg.endCycle as number;
+            cyclesPerFrameRef.current = Math.max(1, Math.ceil(endCycle / TARGET_FRAMES));
+            dispatch({ type: 'PRESCAN_DONE', endCycle });
           } else if (msg.type === 'events') {
             dispatch({
               type: 'EVENTS',
@@ -110,7 +117,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     function tick() {
       if (!workerRef.current) return;
 
-      workerRef.current.postMessage({ type: 'step', count: CYCLES_PER_FRAME });
+      workerRef.current.postMessage({ type: 'step', count: cyclesPerFrameRef.current });
       rafRef.current = requestAnimationFrame(tick);
     }
 

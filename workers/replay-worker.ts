@@ -17,6 +17,17 @@ let maxCycles = 500000;
 // Maps worker-internal warrior indices to logical roles
 let warriorIndexToRole: ('challenger' | 'defender')[];
 
+// Stored init params for re-initialization after prescan
+let storedSeed: number = 0;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let storedWarriors: any[] = [];
+let storedSettings: {
+  coresize: number;
+  maximumCycles: number;
+  instructionLimit: number;
+  minSeparation: number;
+} | null = null;
+
 const messageProvider = {
   publishSync(topic: string, payload: unknown) {
     if (topic === 'CORE_ACCESS') {
@@ -98,6 +109,15 @@ self.onmessage = (e: MessageEvent) => {
 
       Math.random = originalRandom;
 
+      storedSeed = seed;
+      storedWarriors = warriors;
+      storedSettings = {
+        coresize: settings.coreSize,
+        maximumCycles: settings.maxCycles,
+        instructionLimit: settings.maxLength,
+        minSeparation: settings.minSeparation,
+      };
+
       pendingEvents = [];
       challengerTasks = 0;
       defenderTasks = 0;
@@ -157,5 +177,31 @@ self.onmessage = (e: MessageEvent) => {
         cycle: currentCycle,
       });
     }
+  } else if (msg.type === 'prescan') {
+    pendingEvents = [];
+
+    const remaining = maxCycles - currentCycle;
+    for (let i = 0; i < remaining && !roundEnded; i++) {
+      corewar.step();
+      currentCycle++;
+    }
+
+    const endCycle = currentCycle;
+
+    // Re-initialize simulator with same params for actual replay
+    const originalRandom = Math.random;
+    Math.random = mulberry32(storedSeed);
+    corewar.initialiseSimulator(storedSettings!, storedWarriors, messageProvider);
+    Math.random = originalRandom;
+
+    // Reset all state
+    pendingEvents = [];
+    challengerTasks = 0;
+    defenderTasks = 0;
+    roundEnded = false;
+    roundWinner = null;
+    currentCycle = 0;
+
+    self.postMessage({ type: 'prescan_done', endCycle });
   }
 };

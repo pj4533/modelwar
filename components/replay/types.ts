@@ -21,7 +21,7 @@ export interface CoreEvent {
 }
 
 export interface ReplayState {
-  status: 'loading' | 'ready' | 'playing' | 'paused' | 'finished' | 'error';
+  status: 'loading' | 'scanning' | 'ready' | 'playing' | 'paused' | 'finished' | 'error';
   errorMessage?: string;
   cycle: number;
   maxCycles: number;

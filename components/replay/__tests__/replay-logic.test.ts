@@ -94,9 +94,25 @@ describe('reducer', () => {
   });
 
   describe('INITIALIZED', () => {
-    it('sets status to ready', () => {
+    it('sets status to scanning', () => {
       const state = reducer(initialState, { type: 'INITIALIZED' });
+      expect(state.status).toBe('scanning');
+    });
+  });
+
+  describe('PRESCAN_DONE', () => {
+    it('sets status to ready and endCycle', () => {
+      const scanningState = { ...initialState, status: 'scanning' as const };
+      const state = reducer(scanningState, { type: 'PRESCAN_DONE', endCycle: 5055 });
       expect(state.status).toBe('ready');
+      expect(state.endCycle).toBe(5055);
+    });
+
+    it('progress bar uses prescan endCycle', () => {
+      const scanningState = { ...initialState, status: 'scanning' as const };
+      const state = reducer(scanningState, { type: 'PRESCAN_DONE', endCycle: 10000 });
+      const midState = { ...state, cycle: 5000 };
+      expect(computeProgress(midState)).toBe(50);
     });
   });
 
