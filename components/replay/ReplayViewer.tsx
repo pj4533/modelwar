@@ -143,10 +143,12 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     workerRef.current?.postMessage({ type: 'run_to_end' });
   }, []);
 
-  if (state.status === 'loading') {
+  if (state.status === 'loading' || state.status === 'scanning') {
     return (
       <div className="h-screen flex items-center justify-center p-4">
-        <p className="text-cyan text-center tracking-widest">LOADING REPLAY...</p>
+        <p className="text-cyan text-center tracking-widest">
+          {state.status === 'scanning' ? 'SCANNING BATTLE...' : 'LOADING REPLAY...'}
+        </p>
       </div>
     );
   }

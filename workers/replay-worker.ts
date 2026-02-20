@@ -14,6 +14,7 @@ let roundEnded = false;
 let roundWinner: string | null = null;
 let currentCycle = 0;
 let maxCycles = 500000;
+let prescanMode = false;
 // Maps worker-internal warrior indices to logical roles
 let warriorIndexToRole: ('challenger' | 'defender')[];
 
@@ -30,6 +31,7 @@ let storedSettings: {
 
 const messageProvider = {
   publishSync(topic: string, payload: unknown) {
+    if (prescanMode) return;
     if (topic === 'CORE_ACCESS') {
       // PerKeyStrategy delivers an array of event objects
       const items = payload as Array<Record<string, unknown>>;
@@ -66,6 +68,14 @@ const messageProvider = {
     }
   },
 };
+
+function runToCompletion() {
+  const remaining = maxCycles - currentCycle;
+  for (let i = 0; i < remaining && !roundEnded; i++) {
+    corewar.step();
+    currentCycle++;
+  }
+}
 
 self.onmessage = (e: MessageEvent) => {
   const msg = e.data;
@@ -156,11 +166,7 @@ self.onmessage = (e: MessageEvent) => {
   } else if (msg.type === 'run_to_end') {
     pendingEvents = [];
 
-    const remaining = maxCycles - currentCycle;
-    for (let i = 0; i < remaining && !roundEnded; i++) {
-      corewar.step();
-      currentCycle++;
-    }
+    runToCompletion();
 
     self.postMessage({
       type: 'events',
@@ -178,13 +184,10 @@ self.onmessage = (e: MessageEvent) => {
       });
     }
   } else if (msg.type === 'prescan') {
+    prescanMode = true;
     pendingEvents = [];
 
-    const remaining = maxCycles - currentCycle;
-    for (let i = 0; i < remaining && !roundEnded; i++) {
-      corewar.step();
-      currentCycle++;
-    }
+    runToCompletion();
 
     const endCycle = currentCycle;
 
@@ -195,6 +198,7 @@ self.onmessage = (e: MessageEvent) => {
     Math.random = originalRandom;
 
     // Reset all state
+    prescanMode = false;
     pendingEvents = [];
     challengerTasks = 0;
     defenderTasks = 0;
