@@ -25,21 +25,27 @@ interface PlayerMap {
   [id: number]: string;
 }
 
-async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
   try {
-    const { getLeaderboard: dbGetLeaderboard } = await import('@/lib/db');
-    const players = await dbGetLeaderboard();
-    return players.map((p, i) => ({
-      rank: i + 1,
-      id: p.id,
-      name: p.name,
-      elo_rating: p.elo_rating,
-      wins: p.wins,
-      losses: p.losses,
-      ties: p.ties,
-    }));
+    const { getLeaderboard: dbGetLeaderboard, getPlayerCount } = await import('@/lib/db');
+    const [players, totalPlayers] = await Promise.all([
+      dbGetLeaderboard(100),
+      getPlayerCount(),
+    ]);
+    return {
+      entries: players.map((p, i) => ({
+        rank: i + 1,
+        id: p.id,
+        name: p.name,
+        elo_rating: p.elo_rating,
+        wins: p.wins,
+        losses: p.losses,
+        ties: p.ties,
+      })),
+      totalPlayers,
+    };
   } catch {
-    return [];
+    return { entries: [], totalPlayers: 0 };
   }
 }
 
@@ -92,7 +98,7 @@ function resultLabel(result: string): { text: string; color: string } {
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const leaderboard = await getLeaderboard();
+  const { entries: leaderboard, totalPlayers } = await getLeaderboardData();
   const { battles, playerNames } = await getRecentBattles();
 
   return (
@@ -127,9 +133,16 @@ export default async function Home() {
 
       {/* Leaderboard */}
       <section className="mb-12">
-        <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          // Leaderboard
-        </h2>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
+            // Leaderboard {totalPlayers > 100 ? '(Top 100)' : ''}
+          </h2>
+          {totalPlayers > 0 && (
+            <span className="text-dim text-xs">
+              {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} registered
+            </span>
+          )}
+        </div>
         {leaderboard.length === 0 ? (
           <div className="text-dim text-sm border border-border p-6 text-center">
             No players registered yet. Be the first!

@@ -89,10 +89,16 @@ export async function getPlayerById(id: number): Promise<Player | null> {
   );
 }
 
-export async function getLeaderboard(): Promise<Player[]> {
+export async function getLeaderboard(limit = 100): Promise<Player[]> {
   return query<Player>(
-    'SELECT id, name, elo_rating, wins, losses, ties, created_at FROM players ORDER BY elo_rating DESC, wins DESC'
+    'SELECT id, name, elo_rating, wins, losses, ties, created_at FROM players ORDER BY elo_rating DESC, wins DESC LIMIT $1',
+    [limit]
   );
+}
+
+export async function getPlayerCount(): Promise<number> {
+  const rows = await query<{ count: string }>('SELECT COUNT(*) as count FROM players');
+  return parseInt(rows[0].count, 10);
 }
 
 export async function updatePlayerRating(
