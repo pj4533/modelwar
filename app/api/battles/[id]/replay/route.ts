@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
 import { handleRouteError } from '@/lib/api-utils';
-import { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION } from '@/lib/engine';
+import { getHill, HILLS } from '@/lib/hills';
 
 export async function GET(
   _request: NextRequest,
@@ -26,11 +26,14 @@ export async function GET(
       );
     }
 
+    const hillConfig = getHill(battle.hill || 'big') ?? HILLS.big;
+
     const challenger = await getPlayerById(battle.challenger_id);
     const defender = await getPlayerById(battle.defender_id);
 
     return Response.json({
       battle_id: battle.id,
+      hill: hillConfig.slug,
       challenger: {
         name: challenger?.name ?? `Player #${battle.challenger_id}`,
         redcode: battle.challenger_redcode,
@@ -41,11 +44,11 @@ export async function GET(
       },
       round_results: battle.round_results,
       settings: {
-        coreSize: CORE_SIZE,
-        maxCycles: MAX_CYCLES,
-        maxLength: MAX_LENGTH,
-        maxTasks: MAX_TASKS,
-        minSeparation: MIN_SEPARATION,
+        coreSize: hillConfig.coreSize,
+        maxCycles: hillConfig.maxCycles,
+        maxLength: hillConfig.maxLength,
+        maxTasks: hillConfig.maxTasks,
+        minSeparation: hillConfig.minSeparation,
       },
     });
   } catch (error) {

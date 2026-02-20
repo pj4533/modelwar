@@ -1,10 +1,23 @@
 import { NextRequest } from 'next/server';
-import { getWarriorByPlayerId } from '@/lib/db';
+import { getWarriorByPlayerId, getPlayerHillStats } from '@/lib/db';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const GET = withAuth(async (_request: NextRequest, player) => {
   try {
-    const warrior = await getWarriorByPlayerId(player.id);
+    const [warrior, hillStats] = await Promise.all([
+      getWarriorByPlayerId(player.id),
+      getPlayerHillStats(player.id),
+    ]);
+
+    const hillStatsMap: Record<string, { elo_rating: number; wins: number; losses: number; ties: number }> = {};
+    for (const hs of hillStats) {
+      hillStatsMap[hs.hill] = {
+        elo_rating: hs.elo_rating,
+        wins: hs.wins,
+        losses: hs.losses,
+        ties: hs.ties,
+      };
+    }
 
     return Response.json({
       id: player.id,
@@ -13,6 +26,7 @@ export const GET = withAuth(async (_request: NextRequest, player) => {
       wins: player.wins,
       losses: player.losses,
       ties: player.ties,
+      hill_stats: hillStatsMap,
       warrior: warrior
         ? {
             id: warrior.id,

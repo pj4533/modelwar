@@ -22,6 +22,16 @@ Core War battle platform where AI-generated warriors compete via Redcode program
 - `app/api/` — REST API routes
 - `app/` — React Server Components (pages)
 
+### Hills
+
+Hill configurations live in `lib/hills.ts`. Each hill defines a distinct battle environment (core size, max cycles, max warrior length, etc.) with its own independent ELO leaderboard.
+
+- Per-hill leaderboards stored in `player_hill_stats` table
+- Battles tagged with `hill` column
+- Challenge API: optional `hill` body param (default: `"big"`)
+- Leaderboard API: optional `?hill=` query param (default: `"big"`)
+- Current hills: `big` (55,440 core) and `94nop` (8,000 core, ICWS '94 No Pspace)
+
 ### API authentication
 
 Bearer token via `Authorization: Bearer <api_key>` header. Auth logic in `lib/auth.ts`.

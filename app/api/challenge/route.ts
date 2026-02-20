@@ -3,12 +3,14 @@ import {
   getPlayerById,
   getWarriorByPlayerId,
   createBattle,
-  updatePlayerRating,
   withTransaction,
+  getOrCreateHillStats,
+  updateHillStats,
 } from '@/lib/db';
-import { runBattle } from '@/lib/engine';
+import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/elo';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
+import { getHill, isValidHill, DEFAULT_HILL, HILL_SLUGS } from '@/lib/hills';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
   try {
@@ -21,7 +23,7 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         { status: 400 }
       );
     }
-    const { defender_id } = body;
+    const { defender_id, hill: hillSlug = DEFAULT_HILL } = body;
 
     if (!defender_id || typeof defender_id !== 'number') {
       return Response.json(
@@ -29,6 +31,16 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         { status: 400 }
       );
     }
+
+    // Validate hill
+    if (!isValidHill(hillSlug)) {
+      return Response.json(
+        { error: `Invalid hill "${hillSlug}". Available hills: ${HILL_SLUGS.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const hill = getHill(hillSlug)!;
 
     if (defender_id === challenger.id) {
       return Response.json(
@@ -61,32 +73,50 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       );
     }
 
-    // Run the battle
+    // Validate warrior lengths against hill's maxLength
+    const challengerParse = parseWarrior(challengerWarrior.redcode, hill.maxLength);
+    if (!challengerParse.success) {
+      return Response.json(
+        { error: `Your warrior is too long for ${hill.name} (max ${hill.maxLength} instructions, has ${challengerParse.instructionCount})` },
+        { status: 400 }
+      );
+    }
+
+    const defenderParse = parseWarrior(defenderWarrior.redcode, hill.maxLength);
+    if (!defenderParse.success) {
+      return Response.json(
+        { error: `Defender's warrior is too long for ${hill.name} (max ${hill.maxLength} instructions, has ${defenderParse.instructionCount})` },
+        { status: 400 }
+      );
+    }
+
+    // Run the battle with hill config
     const battleResult = runBattle(
       challengerWarrior.redcode,
-      defenderWarrior.redcode
+      defenderWarrior.redcode,
+      hill
     );
 
-    // Calculate new ELO ratings
-    const resultMap = {
-      challenger_win: { elo: 'a_win' as const, challenger: 'win' as const, defender: 'loss' as const },
-      defender_win: { elo: 'b_win' as const, challenger: 'loss' as const, defender: 'win' as const },
-      tie: { elo: 'tie' as const, challenger: 'tie' as const, defender: 'tie' as const },
-    };
-    const mapped = resultMap[battleResult.overallResult];
-    const challengerResultType = mapped.challenger;
-    const defenderResultType = mapped.defender;
-
-    const { newRatingA, newRatingB } = calculateNewRatings(
-      challenger.elo_rating,
-      defender.elo_rating,
-      mapped.elo
-    );
-
-    // Update ratings and record battle atomically
+    // Get per-hill ELO ratings and calculate new ratings
     const battle = await withTransaction(async (client) => {
-      await updatePlayerRating(challenger.id, newRatingA, challengerResultType, client);
-      await updatePlayerRating(defender.id, newRatingB, defenderResultType, client);
+      const challengerStats = await getOrCreateHillStats(challenger.id, hillSlug, client);
+      const defenderStats = await getOrCreateHillStats(defender.id, hillSlug, client);
+
+      const resultMap = {
+        challenger_win: { elo: 'a_win' as const, challenger: 'win' as const, defender: 'loss' as const },
+        defender_win: { elo: 'b_win' as const, challenger: 'loss' as const, defender: 'win' as const },
+        tie: { elo: 'tie' as const, challenger: 'tie' as const, defender: 'tie' as const },
+      };
+      const mapped = resultMap[battleResult.overallResult];
+
+      const { newRatingA, newRatingB } = calculateNewRatings(
+        challengerStats.elo_rating,
+        defenderStats.elo_rating,
+        mapped.elo
+      );
+
+      await updateHillStats(challenger.id, hillSlug, newRatingA, mapped.challenger, client);
+      await updateHillStats(defender.id, hillSlug, newRatingB, mapped.defender, client);
 
       return createBattle({
         challenger_id: challenger.id,
@@ -98,19 +128,21 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         challenger_wins: battleResult.challengerWins,
         defender_wins: battleResult.defenderWins,
         ties: battleResult.ties,
-        challenger_elo_before: challenger.elo_rating,
-        defender_elo_before: defender.elo_rating,
+        challenger_elo_before: challengerStats.elo_rating,
+        defender_elo_before: defenderStats.elo_rating,
         challenger_elo_after: newRatingA,
         defender_elo_after: newRatingB,
         challenger_redcode: challengerWarrior.redcode,
         defender_redcode: defenderWarrior.redcode,
         round_results: battleResult.rounds,
+        hill: hillSlug,
       }, client);
     });
 
     return Response.json({
       battle_id: battle.id,
       result: battleResult.overallResult,
+      hill: hillSlug,
       rounds: battleResult.rounds,
       score: {
         challenger_wins: battleResult.challengerWins,
@@ -120,15 +152,15 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       elo_changes: {
         challenger: {
           name: challenger.name,
-          before: challenger.elo_rating,
-          after: newRatingA,
-          change: newRatingA - challenger.elo_rating,
+          before: battle.challenger_elo_before,
+          after: battle.challenger_elo_after,
+          change: battle.challenger_elo_after - battle.challenger_elo_before,
         },
         defender: {
           name: defender.name,
-          before: defender.elo_rating,
-          after: newRatingB,
-          change: newRatingB - defender.elo_rating,
+          before: battle.defender_elo_before,
+          after: battle.defender_elo_after,
+          change: battle.defender_elo_after - battle.defender_elo_before,
         },
       },
     });

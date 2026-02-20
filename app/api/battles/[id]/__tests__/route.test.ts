@@ -26,6 +26,7 @@ const battle = makeBattle({
   defender_elo_before: 1200,
   challenger_elo_after: 1216,
   defender_elo_after: 1184,
+  hill: 'big',
 });
 const challengerPlayer = makePlayer({ id: 1, name: 'Challenger' });
 const defenderPlayer = makePlayer({ id: 2, name: 'Defender' });
@@ -52,7 +53,7 @@ describe('GET /api/battles/[id]', () => {
     expect(data.error).toBe('Battle not found');
   });
 
-  it('returns full battle details with player names', async () => {
+  it('returns full battle details with player names and hill', async () => {
     mockGetBattleById.mockResolvedValue(battle);
     mockGetPlayerById
       .mockResolvedValueOnce(challengerPlayer)
@@ -65,6 +66,7 @@ describe('GET /api/battles/[id]', () => {
     expect(data.result).toBe('challenger_win');
     expect(data.rounds).toBe(5);
     expect(data.round_results).toBeNull();
+    expect(data.hill).toBe('big');
     expect(data.score).toEqual({ challenger_wins: 3, defender_wins: 1, ties: 1 });
     expect(data.challenger.id).toBe(1);
     expect(data.challenger.name).toBe('Challenger');

@@ -8,10 +8,10 @@ import InfoPanel from './InfoPanel';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
-const CORE_SIZE = 55440;
+const DEFAULT_CORE_SIZE = 55440;
 
 type Action =
-  | { type: 'FETCH_SUCCESS'; maxCycles: number }
+  | { type: 'FETCH_SUCCESS'; maxCycles: number; coreSize: number }
   | { type: 'FETCH_ERROR'; message: string }
   | { type: 'INITIALIZED' }
   | { type: 'PLAY' }
@@ -27,8 +27,8 @@ function createInitialState(): ReplayState {
     cycle: 0,
     maxCycles: 500000,
     speed: 1000,
-    territoryMap: new Uint8Array(CORE_SIZE),
-    activityMap: new Uint8Array(CORE_SIZE),
+    territoryMap: new Uint8Array(DEFAULT_CORE_SIZE),
+    activityMap: new Uint8Array(DEFAULT_CORE_SIZE),
     challengerTasks: 0,
     defenderTasks: 0,
     challengerAlive: true,
@@ -39,8 +39,15 @@ function createInitialState(): ReplayState {
 
 function reducer(state: ReplayState, action: Action): ReplayState {
   switch (action.type) {
-    case 'FETCH_SUCCESS':
-      return { ...state, maxCycles: action.maxCycles };
+    case 'FETCH_SUCCESS': {
+      const coreSize = action.coreSize;
+      return {
+        ...state,
+        maxCycles: action.maxCycles,
+        territoryMap: new Uint8Array(coreSize),
+        activityMap: new Uint8Array(coreSize),
+      };
+    }
     case 'FETCH_ERROR':
       return { ...state, status: 'error', errorMessage: action.message };
     case 'INITIALIZED':
@@ -54,17 +61,18 @@ function reducer(state: ReplayState, action: Action): ReplayState {
     case 'SET_SPEED':
       return { ...state, speed: action.speed };
     case 'EVENTS': {
+      const coreSize = state.territoryMap.length;
       const newTerritory = new Uint8Array(state.territoryMap);
       const newActivity = new Uint8Array(state.activityMap);
 
       // Decay activity
-      for (let i = 0; i < CORE_SIZE; i++) {
+      for (let i = 0; i < coreSize; i++) {
         if (newActivity[i] > 0) newActivity[i]--;
       }
 
       // Apply events
       for (const event of action.events) {
-        const addr = event.address % CORE_SIZE;
+        const addr = event.address % coreSize;
         if (event.accessType === 'WRITE') {
           newTerritory[addr] = event.warriorId === 0 ? 1 : 2;
         }
@@ -132,7 +140,11 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
         if (cancelled) return;
 
         setReplayData(data);
-        dispatch({ type: 'FETCH_SUCCESS', maxCycles: data.settings.maxCycles });
+        dispatch({
+          type: 'FETCH_SUCCESS',
+          maxCycles: data.settings.maxCycles,
+          coreSize: data.settings.coreSize,
+        });
 
         const roundData = data.round_results.find((r) => r.round === roundNumber);
         if (!roundData) {
@@ -231,6 +243,8 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     workerRef.current?.postMessage({ type: 'run_to_end' });
   }, []);
 
+  const coreSize = replayData?.settings.coreSize ?? DEFAULT_CORE_SIZE;
+
   if (state.status === 'loading') {
     return (
       <div className="min-h-screen p-6 max-w-5xl mx-auto pt-12">
@@ -267,6 +281,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
           <CoreCanvas
             territoryMap={state.territoryMap}
             activityMap={state.activityMap}
+            coreSize={coreSize}
           />
           <PlaybackControls
             state={state}

@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import {
-  getLeaderboard,
-  getPlayerCount,
-  getRecentBattles as dbGetRecentBattles,
+  getHillLeaderboard,
+  getHillPlayerCount,
+  getRecentBattlesByHill,
   getPlayersByIds,
 } from '@/lib/db';
+import { HILLS, HILL_SLUGS, DEFAULT_HILL, isValidHill } from '@/lib/hills';
+import type { HillConfig } from '@/lib/hills';
 
 interface LeaderboardEntry {
   rank: number;
@@ -31,16 +33,16 @@ interface PlayerMap {
   [id: number]: string;
 }
 
-async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
+async function getLeaderboardData(hill: string): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
   try {
     const [players, totalPlayers] = await Promise.all([
-      getLeaderboard(20),
-      getPlayerCount(),
+      getHillLeaderboard(hill, 20),
+      getHillPlayerCount(hill),
     ]);
     return {
       entries: players.map((p, i) => ({
         rank: i + 1,
-        id: p.id,
+        id: p.player_id,
         name: p.name,
         elo_rating: p.elo_rating,
         wins: p.wins,
@@ -54,9 +56,9 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
   }
 }
 
-async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNames: PlayerMap }> {
+async function fetchRecentBattles(hill: string): Promise<{ battles: BattleEntry[]; playerNames: PlayerMap }> {
   try {
-    const battles = await dbGetRecentBattles(10);
+    const battles = await getRecentBattlesByHill(hill, 10);
 
     // Batch-fetch all player names in one query instead of N+1
     const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
@@ -97,9 +99,13 @@ function resultLabel(result: string): { text: string; color: string } {
 
 export const dynamic = 'force-dynamic';
 
-export default async function Home() {
-  const { entries: leaderboard, totalPlayers } = await getLeaderboardData();
-  const { battles, playerNames } = await fetchRecentBattles();
+export default async function Home({ searchParams }: { searchParams: Promise<{ hill?: string }> }) {
+  const { hill: hillParam } = await searchParams;
+  const activeHill = (hillParam && isValidHill(hillParam)) ? hillParam : DEFAULT_HILL;
+  const hillConfig: HillConfig = HILLS[activeHill];
+
+  const { entries: leaderboard, totalPlayers } = await getLeaderboardData(activeHill);
+  const { battles, playerNames } = await fetchRecentBattles(activeHill);
 
   return (
     <div className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -130,6 +136,27 @@ export default async function Home() {
           </a>
         </div>
       </header>
+
+      {/* Hill Tabs */}
+      <nav className="flex gap-2 mb-6">
+        {HILL_SLUGS.map((slug) => {
+          const h = HILLS[slug];
+          const isActive = slug === activeHill;
+          return (
+            <Link
+              key={slug}
+              href={`/?hill=${slug}`}
+              className={`px-4 py-2 text-xs uppercase tracking-wider border transition-colors ${
+                isActive
+                  ? 'border-cyan text-cyan bg-cyan/10'
+                  : 'border-border text-dim hover:border-dim hover:text-foreground'
+              }`}
+            >
+              {h.name}
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* Leaderboard */}
       <section className="mb-12">
@@ -276,7 +303,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="text-center text-dim text-xs py-8 border-t border-border">
-        <p>MODELWAR v0.1 — ICWS &apos;94 Standard — Core Size 55,440</p>
+        <p>MODELWAR v0.1 — {hillConfig.description} — {hillConfig.name} (Core Size {hillConfig.coreSize.toLocaleString()})</p>
         <p className="mt-1">A proving ground for AI agents</p>
       </footer>
     </div>

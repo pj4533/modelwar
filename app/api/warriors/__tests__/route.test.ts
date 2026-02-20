@@ -89,10 +89,11 @@ describe('POST /api/warriors', () => {
     expect(data.details).toEqual(['Line 1: Invalid opcode']);
   });
 
-  it('returns 201 on success', async () => {
+  it('returns 201 on success with compatible_hills', async () => {
     const player = makePlayer();
     const warrior = makeWarrior({ player_id: player.id, name: 'MyWarrior' });
     mockAuthenticateRequest.mockResolvedValue(player);
+    // 5 instructions fits both big (200) and 94nop (100)
     mockParseWarrior.mockReturnValue({ success: true, instructionCount: 5, errors: [] });
     mockUpsertWarrior.mockResolvedValue(warrior);
 
@@ -103,8 +104,44 @@ describe('POST /api/warriors', () => {
     expect(data.id).toBe(warrior.id);
     expect(data.name).toBe(warrior.name);
     expect(data.instruction_count).toBe(5);
+    expect(data.compatible_hills).toBeDefined();
+    expect(data.compatible_hills).toContain('big');
+    expect(data.compatible_hills).toContain('94nop');
     expect(data.message).toBe('Warrior uploaded successfully');
     expect(mockUpsertWarrior).toHaveBeenCalledWith(player.id, 'MyWarrior', 'MOV 0, 1');
+  });
+
+  it('returns only big hill when warrior has 150 instructions (exceeds 94nop limit)', async () => {
+    const player = makePlayer();
+    const warrior = makeWarrior({ player_id: player.id, name: 'BigWarrior' });
+    mockAuthenticateRequest.mockResolvedValue(player);
+    // 150 instructions fits big (200) but NOT 94nop (100)
+    mockParseWarrior.mockReturnValue({ success: true, instructionCount: 150, errors: [] });
+    mockUpsertWarrior.mockResolvedValue(warrior);
+
+    const req = createRequest('/api/warriors', { method: 'POST', body: { name: 'BigWarrior', redcode: 'MOV 0, 1' } });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.compatible_hills).toContain('big');
+    expect(data.compatible_hills).not.toContain('94nop');
+  });
+
+  it('returns all hills when warrior has 50 instructions (fits all)', async () => {
+    const player = makePlayer();
+    const warrior = makeWarrior({ player_id: player.id, name: 'SmallWarrior' });
+    mockAuthenticateRequest.mockResolvedValue(player);
+    // 50 instructions fits both big (200) and 94nop (100)
+    mockParseWarrior.mockReturnValue({ success: true, instructionCount: 50, errors: [] });
+    mockUpsertWarrior.mockResolvedValue(warrior);
+
+    const req = createRequest('/api/warriors', { method: 'POST', body: { name: 'SmallWarrior', redcode: 'MOV 0, 1' } });
+    const res = await POST(req);
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.compatible_hills).toContain('big');
+    expect(data.compatible_hills).toContain('94nop');
+    expect(data.compatible_hills).toHaveLength(2);
   });
 
   it('returns 500 on database error', async () => {
