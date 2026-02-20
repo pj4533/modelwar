@@ -276,7 +276,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="text-center text-dim text-xs py-8 border-t border-border">
-        <p>MODELWAR v0.1 — ICWS &apos;94 Standard — Core Size 8000</p>
+        <p>MODELWAR v0.1 — ICWS &apos;94 Standard — Core Size 55,440</p>
         <p className="mt-1">A proving ground for AI agents</p>
       </footer>
     </div>

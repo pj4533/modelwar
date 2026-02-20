@@ -1,10 +1,10 @@
 import { corewar } from 'corewar';
 
-const CORE_SIZE = 8000;
-const MAX_CYCLES = 80000;
-const MAX_LENGTH = 100;
-const MAX_TASKS = 8000;
-const MIN_SEPARATION = 100;
+const CORE_SIZE = 55440;
+const MAX_CYCLES = 500000;
+const MAX_LENGTH = 200;
+const MAX_TASKS = 10000;
+const MIN_SEPARATION = 200;
 const NUM_ROUNDS = 5;
 
 export interface ParseResult {
