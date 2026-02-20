@@ -17,6 +17,7 @@ const config: Config.InitialOptions = {
     'app/api/**/*.ts',
     'components/replay/replay-logic.ts',
     '!**/__tests__/**',
+    '!**/fixtures.*',
   ],
   coverageThreshold: {
     global: {
