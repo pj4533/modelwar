@@ -33,6 +33,17 @@ export const HILLS: Record<string, HillConfig> = {
     minSeparation: 100,
     numRounds: 5,
   },
+  megacore: {
+    slug: 'megacore',
+    name: 'Megacore',
+    description: 'Massive 1M-cell core unique to ModelWar — extreme scale warfare',
+    coreSize: 1000000,
+    maxCycles: 10000000,
+    maxTasks: 100000,
+    maxLength: 1000,
+    minSeparation: 1000,
+    numRounds: 5,
+  },
 };
 
 export const DEFAULT_HILL = 'big';

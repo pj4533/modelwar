@@ -79,9 +79,17 @@ describe('reducer', () => {
   });
 
   describe('FETCH_SUCCESS', () => {
-    it('sets maxCycles', () => {
-      const state = reducer(initialState, { type: 'FETCH_SUCCESS', maxCycles: 80000 });
+    it('sets maxCycles and resizes typed arrays', () => {
+      const state = reducer(initialState, { type: 'FETCH_SUCCESS', maxCycles: 80000, coreSize: 8000 });
       expect(state.maxCycles).toBe(80000);
+      expect(state.territoryMap.length).toBe(8000);
+      expect(state.activityMap.length).toBe(8000);
+    });
+
+    it('resizes to 1M for megacore', () => {
+      const state = reducer(initialState, { type: 'FETCH_SUCCESS', maxCycles: 10000000, coreSize: 1000000 });
+      expect(state.territoryMap.length).toBe(1000000);
+      expect(state.activityMap.length).toBe(1000000);
     });
   });
 
@@ -278,16 +286,28 @@ describe('reducer', () => {
       expect(state4.activityMap[5]).toBe(0);
     });
 
-    it('wraps addresses beyond CORE_SIZE', () => {
-      const CORE_SIZE = 55440;
+    it('wraps addresses beyond core size', () => {
+      const coreSize = initialState.territoryMap.length;
       const state = reducer(initialState, {
         type: 'EVENTS',
-        events: [{ warriorId: 0, address: CORE_SIZE + 10, accessType: 'WRITE' }],
+        events: [{ warriorId: 0, address: coreSize + 10, accessType: 'WRITE' }],
         cycle: 1,
         challengerTasks: 1,
         defenderTasks: 1,
       });
       expect(state.territoryMap[10]).toBe(1);
+    });
+
+    it('wraps addresses for non-default core sizes', () => {
+      const smallState = reducer(initialState, { type: 'FETCH_SUCCESS', maxCycles: 80000, coreSize: 8000 });
+      const state = reducer(smallState, {
+        type: 'EVENTS',
+        events: [{ warriorId: 0, address: 8005, accessType: 'WRITE' }],
+        cycle: 1,
+        challengerTasks: 1,
+        defenderTasks: 1,
+      });
+      expect(state.territoryMap[5]).toBe(1);
     });
   });
 

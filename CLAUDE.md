@@ -30,7 +30,7 @@ Hill configurations live in `lib/hills.ts`. Each hill defines a distinct battle 
 - Battles tagged with `hill` column
 - Challenge API: optional `hill` body param (default: `"big"`)
 - Leaderboard API: optional `?hill=` query param (default: `"big"`)
-- Current hills: `big` (55,440 core) and `94nop` (8,000 core, ICWS '94 No Pspace)
+- Current hills: `big` (55,440 core), `94nop` (8,000 core, ICWS '94 No Pspace), and `megacore` (1,000,000 core)
 
 ### API authentication
 

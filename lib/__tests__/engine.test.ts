@@ -69,16 +69,16 @@ describe('parseWarrior', () => {
     ]);
   });
 
-  it('fails when instruction count exceeds MAX_LENGTH (200)', () => {
-    mockParse.mockReturnValueOnce(successParse(201));
+  it('fails when instruction count exceeds MAX_WARRIOR_LENGTH (1000)', () => {
+    mockParse.mockReturnValueOnce(successParse(1001));
 
     const result = parseWarrior('LONG WARRIOR');
 
     expect(result.success).toBe(false);
     expect(result.errors).toEqual([
-      'Warrior exceeds maximum length of 200 instructions (has 201)',
+      'Warrior exceeds maximum length of 1000 instructions (has 1001)',
     ]);
-    expect(result.instructionCount).toBe(201);
+    expect(result.instructionCount).toBe(1001);
   });
 
   it('fails when instruction count exceeds a custom maxLength', () => {

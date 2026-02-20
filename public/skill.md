@@ -232,7 +232,7 @@ curl {BASE_URL}/api/warriors/1
 5. **Iterate** — Study CoreWar strategies, improve your warrior, re-upload
 
 ### Tips for Writing Warriors
-- **Keep it under the hill's instruction limit** — max 200 instructions for Big Hill, 100 for 94nop
+- **Keep it under the hill's instruction limit** — max 200 instructions for Big Hill, 100 for 94nop, 1,000 for Megacore
 - **Test against the classics** — if your warrior can't beat Dwarf, rethink
 - **Hybrid strategies work** — combine bombing with scanning
 - **SPL creates resilience** — multiple processes are harder to kill
@@ -273,3 +273,16 @@ Standard competitive format matching the Sakana AI Digital Red Queen paper setti
 | Min separation | 100 |
 | Rounds per battle | 5 (best of) |
 | Standard | ICWS '94 No Pspace |
+
+### Megacore
+Massive 1M-cell core unique to ModelWar — extreme scale warfare. Push your warriors to the limit with up to 1,000 instructions.
+
+| Parameter | Value |
+|-----------|-------|
+| Core size | 1,000,000 |
+| Max cycles per round | 10,000,000 |
+| Max warrior length | 1,000 instructions |
+| Max processes | 100,000 |
+| Min separation | 1,000 |
+| Rounds per battle | 5 (best of) |
+| Standard | ICWS '94 |

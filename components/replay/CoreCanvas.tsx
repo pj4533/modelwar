@@ -15,6 +15,9 @@ function computeGrid(coreSize: number): GridDimensions {
   if (coreSize === 8000) {
     return { cols: 100, rows: 80, cellSize: 5 };
   }
+  if (coreSize === 1000000) {
+    return { cols: 1000, rows: 1000, cellSize: 1 };
+  }
   // Fallback: try to make a reasonable grid
   const cols = Math.ceil(Math.sqrt(coreSize * 1.4));
   const rows = Math.ceil(coreSize / cols);
