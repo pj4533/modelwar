@@ -130,12 +130,43 @@ tr:hover td {
   box-shadow: inset 0 0 40px rgba(0, 255, 204, 0.05);
 }
 
-.speed-btn-active {
-  background: rgba(0, 255, 204, 0.15);
-  color: var(--cyan);
-  border-color: var(--cyan);
-}
-
 .progress-glow {
   box-shadow: 0 0 6px rgba(0, 255, 204, 0.4);
+}
+
+/* GitHub Corner */
+.github-corner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 9998;
+  color: var(--background);
+}
+
+.github-corner-svg {
+  fill: var(--cyan);
+  color: var(--background);
+  filter: drop-shadow(0 0 8px rgba(0, 255, 204, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.github-corner:hover .github-corner-svg {
+  filter: drop-shadow(0 0 16px rgba(0, 255, 204, 0.8)) drop-shadow(0 0 30px rgba(0, 255, 204, 0.4));
+}
+
+.github-corner:hover .octo-arm {
+  animation: octocat-wave 560ms ease-in-out;
+}
+
+@keyframes octocat-wave {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-25deg); }
+  40%, 80% { transform: rotate(10deg); }
+}
+
+@media (max-width: 500px) {
+  .github-corner-svg {
+    width: 60px;
+    height: 60px;
+  }
 }

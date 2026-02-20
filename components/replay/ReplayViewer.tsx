@@ -1,110 +1,17 @@
 'use client';
 
 import { useEffect, useReducer, useRef, useCallback, useState } from 'react';
-import type { ReplayData, ReplayState, PlaybackSpeed, CoreEvent } from './types';
+import type { ReplayData } from './types';
+import { reducer, createInitialState } from './replay-logic';
 import CoreCanvas from './CoreCanvas';
 import PlaybackControls from './PlaybackControls';
-import InfoPanel from './InfoPanel';
 import RoundHeader from './RoundHeader';
 import Link from 'next/link';
 
 const DEFAULT_CORE_SIZE = 55440;
-
-type Action =
-  | { type: 'FETCH_SUCCESS'; maxCycles: number; coreSize: number }
-  | { type: 'FETCH_ERROR'; message: string }
-  | { type: 'INITIALIZED' }
-  | { type: 'PLAY' }
-  | { type: 'PAUSE' }
-  | { type: 'SET_SPEED'; speed: PlaybackSpeed }
-  | { type: 'EVENTS'; events: CoreEvent[]; cycle: number; challengerTasks: number; defenderTasks: number }
-  | { type: 'ROUND_END'; winner: string; cycle: number }
-  | { type: 'INIT_ERROR'; message: string };
-
-function createInitialState(): ReplayState {
-  return {
-    status: 'loading',
-    cycle: 0,
-    maxCycles: 500000,
-    speed: 1000,
-    territoryMap: new Uint8Array(DEFAULT_CORE_SIZE),
-    activityMap: new Uint8Array(DEFAULT_CORE_SIZE),
-    challengerTasks: 0,
-    defenderTasks: 0,
-    challengerAlive: true,
-    defenderAlive: true,
-    winner: null,
-  };
-}
-
-function reducer(state: ReplayState, action: Action): ReplayState {
-  switch (action.type) {
-    case 'FETCH_SUCCESS': {
-      const coreSize = action.coreSize;
-      return {
-        ...state,
-        maxCycles: action.maxCycles,
-        territoryMap: new Uint8Array(coreSize),
-        activityMap: new Uint8Array(coreSize),
-      };
-    }
-    case 'FETCH_ERROR':
-      return { ...state, status: 'error', errorMessage: action.message };
-    case 'INITIALIZED':
-      return { ...state, status: 'ready' };
-    case 'INIT_ERROR':
-      return { ...state, status: 'error', errorMessage: action.message };
-    case 'PLAY':
-      return { ...state, status: 'playing' };
-    case 'PAUSE':
-      return { ...state, status: state.status === 'playing' ? 'paused' : state.status };
-    case 'SET_SPEED':
-      return { ...state, speed: action.speed };
-    case 'EVENTS': {
-      const coreSize = state.territoryMap.length;
-      const newTerritory = new Uint8Array(state.territoryMap);
-      const newActivity = new Uint8Array(state.activityMap);
-
-      // Decay activity
-      for (let i = 0; i < coreSize; i++) {
-        if (newActivity[i] > 0) newActivity[i]--;
-      }
-
-      // Apply events
-      for (const event of action.events) {
-        const addr = event.address % coreSize;
-        if (event.accessType === 'WRITE') {
-          newTerritory[addr] = event.warriorId === 0 ? 1 : 2;
-        }
-        newActivity[addr] = 3;
-        // Also mark territory on EXECUTE if not yet claimed
-        if (event.accessType === 'EXECUTE' && newTerritory[addr] === 0) {
-          newTerritory[addr] = event.warriorId === 0 ? 1 : 2;
-        }
-      }
-
-      return {
-        ...state,
-        cycle: action.cycle,
-        challengerTasks: action.challengerTasks,
-        defenderTasks: action.defenderTasks,
-        challengerAlive: action.challengerTasks > 0,
-        defenderAlive: action.defenderTasks > 0,
-        territoryMap: newTerritory,
-        activityMap: newActivity,
-      };
-    }
-    case 'ROUND_END':
-      return {
-        ...state,
-        status: 'finished',
-        winner: action.winner,
-        cycle: action.cycle,
-      };
-    default:
-      return state;
-  }
-}
+const TARGET_SECONDS = 18;
+const TARGET_FRAMES = TARGET_SECONDS * 60;
+const MAX_FRAME_SKIP = 10;
 
 interface ReplayViewerProps {
   battleId: number;
@@ -116,12 +23,9 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
   const [replayData, setReplayData] = useState<ReplayData | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const rafRef = useRef<number | null>(null);
-  const speedRef = useRef(state.speed);
-
-  // Keep speedRef in sync
-  useEffect(() => {
-    speedRef.current = state.speed;
-  }, [state.speed]);
+  const cyclesPerFrameRef = useRef<number>(100);
+  const frameSkipRef = useRef<number>(1);
+  const frameCountRef = useRef<number>(0);
 
   // Fetch replay data and initialize worker
   useEffect(() => {
@@ -161,6 +65,19 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
           const msg = e.data;
           if (msg.type === 'initialized') {
             dispatch({ type: 'INITIALIZED' });
+            worker.postMessage({ type: 'prescan' });
+          } else if (msg.type === 'prescan_done') {
+            const endCycle = msg.endCycle as number;
+            if (endCycle <= TARGET_FRAMES) {
+              // Short battle: 1 cycle per step, skip frames to stretch duration
+              cyclesPerFrameRef.current = 1;
+              frameSkipRef.current = Math.min(MAX_FRAME_SKIP, Math.max(1, Math.round(TARGET_FRAMES / endCycle)));
+            } else {
+              // Normal battle: multiple cycles per frame
+              cyclesPerFrameRef.current = Math.ceil(endCycle / TARGET_FRAMES);
+              frameSkipRef.current = 1;
+            }
+            dispatch({ type: 'PRESCAN_DONE', endCycle });
           } else if (msg.type === 'events') {
             dispatch({
               type: 'EVENTS',
@@ -215,8 +132,10 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
     function tick() {
       if (!workerRef.current) return;
-
-      workerRef.current.postMessage({ type: 'step', count: speedRef.current });
+      frameCountRef.current++;
+      if (frameCountRef.current % frameSkipRef.current === 0) {
+        workerRef.current.postMessage({ type: 'step', count: cyclesPerFrameRef.current });
+      }
       rafRef.current = requestAnimationFrame(tick);
     }
 
@@ -232,7 +151,6 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
   const handlePlay = useCallback(() => dispatch({ type: 'PLAY' }), []);
   const handlePause = useCallback(() => dispatch({ type: 'PAUSE' }), []);
-  const handleSpeedChange = useCallback((speed: PlaybackSpeed) => dispatch({ type: 'SET_SPEED', speed }), []);
 
   const handleStepForward = useCallback(() => {
     workerRef.current?.postMessage({ type: 'step', count: 1 });
@@ -245,17 +163,19 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
   const coreSize = replayData?.settings.coreSize ?? DEFAULT_CORE_SIZE;
 
-  if (state.status === 'loading') {
+  if (state.status === 'loading' || state.status === 'scanning') {
     return (
-      <div className="min-h-screen p-6 max-w-5xl mx-auto pt-12">
-        <p className="text-cyan text-center tracking-widest">LOADING REPLAY...</p>
+      <div className="h-screen flex items-center justify-center p-4">
+        <p className="text-cyan text-center tracking-widest">
+          {state.status === 'scanning' ? 'SCANNING BATTLE...' : 'LOADING REPLAY...'}
+        </p>
       </div>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <div className="min-h-screen p-6 max-w-5xl mx-auto pt-12">
+      <div className="h-screen flex flex-col items-center justify-center p-4">
         <p className="text-red text-center">{state.errorMessage}</p>
         <p className="text-center mt-4">
           <Link href={`/battles/${battleId}`} className="text-cyan hover:underline text-sm">
@@ -267,7 +187,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto pt-8">
+    <div className="h-screen flex flex-col p-4 max-w-4xl mx-auto">
       <RoundHeader
         battleId={battleId}
         roundNumber={roundNumber}
@@ -276,28 +196,24 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
         defenderName={replayData?.defender.name ?? 'Defender'}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4">
-        <div className="space-y-4">
-          <CoreCanvas
-            territoryMap={state.territoryMap}
-            activityMap={state.activityMap}
-            coreSize={coreSize}
-          />
-          <PlaybackControls
-            state={state}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onSpeedChange={handleSpeedChange}
-            onStepForward={handleStepForward}
-            onJumpToEnd={handleJumpToEnd}
-          />
-        </div>
-        <InfoPanel
+      <div className="flex-1 min-h-0">
+        <CoreCanvas
+          territoryMap={state.territoryMap}
+          activityMap={state.activityMap}
+          coreSize={coreSize}
+        />
+      </div>
+
+      <div className="mt-3">
+        <PlaybackControls
           state={state}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onStepForward={handleStepForward}
+          onJumpToEnd={handleJumpToEnd}
           challengerName={replayData?.challenger.name ?? 'Challenger'}
           defenderName={replayData?.defender.name ?? 'Defender'}
           battleId={battleId}
-          roundNumber={roundNumber}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
+import GitHubCorner from "./components/GitHubCorner";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -20,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistMono.variable} antialiased`}>
+        <GitHubCorner />
         {children}
       </body>
     </html>

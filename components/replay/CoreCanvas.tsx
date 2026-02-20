@@ -10,7 +10,7 @@ interface GridDimensions {
 
 function computeGrid(coreSize: number): GridDimensions {
   if (coreSize === 55440) {
-    return { cols: 280, rows: 198, cellSize: 3 };
+    return { cols: 280, rows: 198, cellSize: 2 };
   }
   if (coreSize === 8000) {
     return { cols: 100, rows: 80, cellSize: 5 };
@@ -118,7 +118,7 @@ export default function CoreCanvas({ territoryMap, activityMap, coreSize = 55440
         ref={canvasRef}
         width={width}
         height={height}
-        style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
       />
     </div>
   );

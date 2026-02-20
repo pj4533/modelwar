@@ -15,6 +15,7 @@ const config: Config.InitialOptions = {
   collectCoverageFrom: [
     'lib/**/*.ts',
     'app/api/**/*.ts',
+    'components/replay/replay-logic.ts',
     '!**/__tests__/**',
   ],
   coverageThreshold: {
