@@ -20,14 +20,12 @@ export interface CoreEvent {
   accessType: 'READ' | 'WRITE' | 'EXECUTE';
 }
 
-export type PlaybackSpeed = 100 | 500 | 1000 | 2500 | 10000 | 50000;
-
 export interface ReplayState {
   status: 'loading' | 'ready' | 'playing' | 'paused' | 'finished' | 'error';
   errorMessage?: string;
   cycle: number;
   maxCycles: number;
-  speed: PlaybackSpeed;
+  endCycle: number | null;
   territoryMap: Uint8Array;
   activityMap: Uint8Array;
   challengerTasks: number;

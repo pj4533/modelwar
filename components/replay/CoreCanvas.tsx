@@ -4,7 +4,7 @@ import { useRef, useEffect } from 'react';
 
 const COLS = 280;
 const ROWS = 198;
-const CELL_SIZE = 3;
+const CELL_SIZE = 2;
 const WIDTH = COLS * CELL_SIZE;
 const HEIGHT = ROWS * CELL_SIZE;
 
@@ -86,7 +86,7 @@ export default function CoreCanvas({ territoryMap, activityMap }: CoreCanvasProp
         ref={canvasRef}
         width={WIDTH}
         height={HEIGHT}
-        style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+        style={{ maxWidth: '100%', maxHeight: '100%', height: 'auto', display: 'block' }}
       />
     </div>
   );
