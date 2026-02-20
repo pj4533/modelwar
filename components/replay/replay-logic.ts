@@ -19,7 +19,8 @@ export type Action =
   | { type: 'PAUSE' }
   | { type: 'EVENTS'; events: CoreEvent[]; cycle: number; challengerTasks: number; defenderTasks: number }
   | { type: 'ROUND_END'; winner: string; cycle: number }
-  | { type: 'INIT_ERROR'; message: string };
+  | { type: 'INIT_ERROR'; message: string }
+  | { type: 'PRESCAN_DONE'; endCycle: number };
 
 export function createInitialState(): ReplayState {
   return {
@@ -44,7 +45,9 @@ export function reducer(state: ReplayState, action: Action): ReplayState {
     case 'FETCH_ERROR':
       return { ...state, status: 'error', errorMessage: action.message };
     case 'INITIALIZED':
-      return { ...state, status: 'ready' };
+      return { ...state, status: 'scanning' };
+    case 'PRESCAN_DONE':
+      return { ...state, status: 'ready', endCycle: action.endCycle };
     case 'INIT_ERROR':
       return { ...state, status: 'error', errorMessage: action.message };
     case 'PLAY':

@@ -14,11 +14,24 @@ let roundEnded = false;
 let roundWinner: string | null = null;
 let currentCycle = 0;
 let maxCycles = 500000;
+let prescanMode = false;
 // Maps worker-internal warrior indices to logical roles
 let warriorIndexToRole: ('challenger' | 'defender')[];
 
+// Stored init params for re-initialization after prescan
+let storedSeed: number = 0;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let storedWarriors: any[] = [];
+let storedSettings: {
+  coresize: number;
+  maximumCycles: number;
+  instructionLimit: number;
+  minSeparation: number;
+} | null = null;
+
 const messageProvider = {
   publishSync(topic: string, payload: unknown) {
+    if (prescanMode) return;
     if (topic === 'CORE_ACCESS') {
       // PerKeyStrategy delivers an array of event objects
       const items = payload as Array<Record<string, unknown>>;
@@ -55,6 +68,14 @@ const messageProvider = {
     }
   },
 };
+
+function runToCompletion() {
+  const remaining = maxCycles - currentCycle;
+  for (let i = 0; i < remaining && !roundEnded; i++) {
+    corewar.step();
+    currentCycle++;
+  }
+}
 
 self.onmessage = (e: MessageEvent) => {
   const msg = e.data;
@@ -98,6 +119,15 @@ self.onmessage = (e: MessageEvent) => {
 
       Math.random = originalRandom;
 
+      storedSeed = seed;
+      storedWarriors = warriors;
+      storedSettings = {
+        coresize: settings.coreSize,
+        maximumCycles: settings.maxCycles,
+        instructionLimit: settings.maxLength,
+        minSeparation: settings.minSeparation,
+      };
+
       pendingEvents = [];
       challengerTasks = 0;
       defenderTasks = 0;
@@ -136,11 +166,7 @@ self.onmessage = (e: MessageEvent) => {
   } else if (msg.type === 'run_to_end') {
     pendingEvents = [];
 
-    const remaining = maxCycles - currentCycle;
-    for (let i = 0; i < remaining && !roundEnded; i++) {
-      corewar.step();
-      currentCycle++;
-    }
+    runToCompletion();
 
     self.postMessage({
       type: 'events',
@@ -157,5 +183,29 @@ self.onmessage = (e: MessageEvent) => {
         cycle: currentCycle,
       });
     }
+  } else if (msg.type === 'prescan') {
+    prescanMode = true;
+    pendingEvents = [];
+
+    runToCompletion();
+
+    const endCycle = currentCycle;
+
+    // Re-initialize simulator with same params for actual replay
+    const originalRandom = Math.random;
+    Math.random = mulberry32(storedSeed);
+    corewar.initialiseSimulator(storedSettings!, storedWarriors, messageProvider);
+    Math.random = originalRandom;
+
+    // Reset all state
+    prescanMode = false;
+    pendingEvents = [];
+    challengerTasks = 0;
+    defenderTasks = 0;
+    roundEnded = false;
+    roundWinner = null;
+    currentCycle = 0;
+
+    self.postMessage({ type: 'prescan_done', endCycle });
   }
 };
