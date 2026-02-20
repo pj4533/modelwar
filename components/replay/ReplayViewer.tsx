@@ -6,6 +6,7 @@ import { reducer, createInitialState } from './replay-logic';
 import CoreCanvas from './CoreCanvas';
 import PlaybackControls from './PlaybackControls';
 import RoundHeader from './RoundHeader';
+import CodeOverlay from './CodeOverlay';
 import Link from 'next/link';
 
 const TARGET_SECONDS = 18;
@@ -156,6 +157,16 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     workerRef.current?.postMessage({ type: 'run_to_end' });
   }, []);
 
+  const [viewingCode, setViewingCode] = useState<'challenger' | 'defender' | null>(null);
+
+  const handleViewCode = useCallback((role: 'challenger' | 'defender') => {
+    setViewingCode(role);
+  }, []);
+
+  const handleCloseCode = useCallback(() => {
+    setViewingCode(null);
+  }, []);
+
   if (state.status === 'loading' || state.status === 'scanning') {
     return (
       <div className="h-screen flex items-center justify-center p-4">
@@ -180,34 +191,46 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
   }
 
   return (
-    <div className="h-screen flex flex-col p-4 max-w-4xl mx-auto">
-      <RoundHeader
-        battleId={battleId}
-        roundNumber={roundNumber}
-        totalRounds={replayData?.round_results.length ?? 5}
-        challengerName={replayData?.challenger.name ?? 'Challenger'}
-        defenderName={replayData?.defender.name ?? 'Defender'}
-      />
-
-      <div className="flex-1 min-h-0">
-        <CoreCanvas
-          territoryMap={state.territoryMap}
-          activityMap={state.activityMap}
-        />
-      </div>
-
-      <div className="mt-3">
-        <PlaybackControls
-          state={state}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onStepForward={handleStepForward}
-          onJumpToEnd={handleJumpToEnd}
+    <>
+      <div className="h-screen flex flex-col p-4 max-w-4xl mx-auto">
+        <RoundHeader
+          battleId={battleId}
+          roundNumber={roundNumber}
+          totalRounds={replayData?.round_results.length ?? 5}
           challengerName={replayData?.challenger.name ?? 'Challenger'}
           defenderName={replayData?.defender.name ?? 'Defender'}
-          battleId={battleId}
+          onViewCode={handleViewCode}
         />
+
+        <div className="flex-1 min-h-0">
+          <CoreCanvas
+            territoryMap={state.territoryMap}
+            activityMap={state.activityMap}
+          />
+        </div>
+
+        <div className="mt-3">
+          <PlaybackControls
+            state={state}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onStepForward={handleStepForward}
+            onJumpToEnd={handleJumpToEnd}
+            challengerName={replayData?.challenger.name ?? 'Challenger'}
+            defenderName={replayData?.defender.name ?? 'Defender'}
+            battleId={battleId}
+          />
+        </div>
       </div>
-    </div>
+
+      {viewingCode && replayData && (
+        <CodeOverlay
+          name={viewingCode === 'challenger' ? replayData.challenger.name : replayData.defender.name}
+          redcode={viewingCode === 'challenger' ? replayData.challenger.redcode : replayData.defender.redcode}
+          role={viewingCode}
+          onClose={handleCloseCode}
+        />
+      )}
+    </>
   );
 }

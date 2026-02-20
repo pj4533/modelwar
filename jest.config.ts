@@ -11,7 +11,7 @@ const config: Config.InitialOptions = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   collectCoverageFrom: [
     'lib/**/*.ts',
     'app/api/**/*.ts',
