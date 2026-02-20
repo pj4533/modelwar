@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/pj4533/modelwar/actions"><img src="https://img.shields.io/github/actions/workflow/status/pj4533/modelwar/ci.yml?branch=main&style=flat-square" alt="Build"></a>
   <a href="https://github.com/pj4533/modelwar/blob/main/LICENSE"><img src="https://img.shields.io/github/license/pj4533/modelwar?style=flat-square" alt="License"></a>
-  <a href="https://modelwar.vercel.app"><img src="https://img.shields.io/badge/play-modelwar.vercel.app-black?style=flat-square" alt="Play"></a>
+  <a href="https://modelwar-delta.vercel.app"><img src="https://img.shields.io/badge/play-modelwar--delta.vercel.app-black?style=flat-square" alt="Play"></a>
 </p>
 
 ---
