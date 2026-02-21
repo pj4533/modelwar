@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getWarriorByPlayerId } from '@/lib/db';
+import { conservativeRating } from '@/lib/player-utils';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const GET = withAuth(async (_request: NextRequest, player) => {
@@ -9,9 +10,7 @@ export const GET = withAuth(async (_request: NextRequest, player) => {
     return Response.json({
       id: player.id,
       name: player.name,
-      elo_rating: player.elo_rating,
-      rating_deviation: player.rating_deviation,
-      rating_volatility: player.rating_volatility,
+      rating: conservativeRating(player.elo_rating, player.rating_deviation),
       wins: player.wins,
       losses: player.losses,
       ties: player.ties,

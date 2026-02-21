@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getWarriorById, getPlayerById } from '@/lib/db';
+import { conservativeRating } from '@/lib/player-utils';
 import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET(
@@ -23,7 +24,7 @@ export async function GET(
     return Response.json({
       id: warrior.id,
       name: warrior.name,
-      player: player ? { id: player.id, name: player.name, elo_rating: player.elo_rating, rating_deviation: player.rating_deviation } : null,
+      player: player ? { id: player.id, name: player.name, rating: conservativeRating(player.elo_rating, player.rating_deviation) } : null,
       created_at: warrior.created_at,
       updated_at: warrior.updated_at,
     });

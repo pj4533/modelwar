@@ -8,6 +8,7 @@ import {
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
 import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
+import { conservativeRating } from '@/lib/player-utils';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
@@ -131,22 +132,18 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         defender_wins: battleResult.defenderWins,
         ties: battleResult.ties,
       },
-      elo_changes: {
+      rating_changes: {
         challenger: {
           name: challenger.name,
-          before: challenger.elo_rating,
-          after: newRatingA,
-          change: newRatingA - challenger.elo_rating,
-          rd_before: challenger.rating_deviation,
-          rd_after: newRdA,
+          before: conservativeRating(challenger.elo_rating, challenger.rating_deviation),
+          after: conservativeRating(newRatingA, newRdA),
+          change: conservativeRating(newRatingA, newRdA) - conservativeRating(challenger.elo_rating, challenger.rating_deviation),
         },
         defender: {
           name: defender.name,
-          before: defender.elo_rating,
-          after: newRatingB,
-          change: newRatingB - defender.elo_rating,
-          rd_before: defender.rating_deviation,
-          rd_after: newRdB,
+          before: conservativeRating(defender.elo_rating, defender.rating_deviation),
+          after: conservativeRating(newRatingB, newRdB),
+          change: conservativeRating(newRatingB, newRdB) - conservativeRating(defender.elo_rating, defender.rating_deviation),
         },
       },
     });

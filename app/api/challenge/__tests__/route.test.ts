@@ -186,13 +186,13 @@ describe('POST /api/challenge', () => {
     expect(data.result).toBe('challenger_win');
     expect(data.score.challenger_wins).toBe(3);
     expect(data.score.defender_wins).toBe(1);
-    expect(data.elo_changes.challenger.before).toBe(1200);
-    expect(data.elo_changes.challenger.after).toBe(1216);
-    expect(data.elo_changes.challenger.rd_before).toBe(350);
-    expect(data.elo_changes.challenger.rd_after).toBe(320);
-    expect(data.elo_changes.defender.after).toBe(1184);
-    expect(data.elo_changes.defender.rd_before).toBe(350);
-    expect(data.elo_changes.defender.rd_after).toBe(320);
+    // conservative = rating - 2*rd; before: 1200-700=500, challenger after: 1216-640=576, defender after: 1184-640=544
+    expect(data.rating_changes.challenger.before).toBe(500);
+    expect(data.rating_changes.challenger.after).toBe(576);
+    expect(data.rating_changes.challenger.change).toBe(76);
+    expect(data.rating_changes.defender.before).toBe(500);
+    expect(data.rating_changes.defender.after).toBe(544);
+    expect(data.rating_changes.defender.change).toBe(44);
     expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 320, 0.06, 'win', expect.anything());
     expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 320, 0.06, 'loss', expect.anything());
     expect(mockCalcRatings).toHaveBeenCalledWith(

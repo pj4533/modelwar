@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createPlayer } from '@/lib/db';
+import { conservativeRating } from '@/lib/player-utils';
 import { handleRouteError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
@@ -35,9 +36,7 @@ export async function POST(request: NextRequest) {
       id: player.id,
       name: player.name,
       api_key: player.api_key,
-      elo_rating: player.elo_rating,
-      rating_deviation: player.rating_deviation,
-      rating_volatility: player.rating_volatility,
+      rating: conservativeRating(player.elo_rating, player.rating_deviation),
       message: 'Registration successful! Save your API key - you will need it for all authenticated requests.',
     }, { status: 201 });
   } catch (error: unknown) {

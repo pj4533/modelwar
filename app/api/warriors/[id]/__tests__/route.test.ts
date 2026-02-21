@@ -59,8 +59,8 @@ describe('GET /api/warriors/[id]', () => {
     expect(data.player).not.toBeNull();
     expect(data.player.id).toBe(player.id);
     expect(data.player.name).toBe(player.name);
-    expect(data.player.elo_rating).toBe(player.elo_rating);
-    expect(data.player.rating_deviation).toBe(player.rating_deviation);
+    expect(data.player.rating).toBe(Math.round(player.elo_rating - 2 * player.rating_deviation));
+    expect(data.player.elo_rating).toBeUndefined();
     expect(data.created_at).toBeDefined();
     expect(data.updated_at).toBeDefined();
   });
