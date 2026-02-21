@@ -72,7 +72,7 @@ describe('Player queries', () => {
     expect(result).toBeNull();
   });
 
-  it('getLeaderboard: returns rows ordered by elo with default limit', async () => {
+  it('getLeaderboard: returns rows ordered by conservative rating with default limit', async () => {
     const players = [makePlayer({ elo_rating: 1400 }), makePlayer({ id: 2, elo_rating: 1200 })];
     mockQuery.mockResolvedValueOnce({ rows: players });
 
@@ -80,7 +80,7 @@ describe('Player queries', () => {
 
     expect(result).toEqual(players);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('rating_deviation'),
+      expect.stringContaining('ORDER BY (elo_rating - 2 * rating_deviation) DESC'),
       [100]
     );
   });

@@ -1,15 +1,19 @@
 import type { Battle } from './db';
 
+function conservativeRating(elo: number, rd: number | null): number {
+  return rd != null ? Math.round(elo - 2 * rd) : elo;
+}
+
 export function buildEloHistory(playerId: number, battles: Battle[]): number[] {
   const chronological = [...battles].reverse();
   const points: number[] = [];
   for (const b of chronological) {
     if (b.challenger_id === playerId) {
-      if (points.length === 0) points.push(b.challenger_elo_before);
-      points.push(b.challenger_elo_after);
+      if (points.length === 0) points.push(conservativeRating(b.challenger_elo_before, b.challenger_rd_before));
+      points.push(conservativeRating(b.challenger_elo_after, b.challenger_rd_after));
     } else {
-      if (points.length === 0) points.push(b.defender_elo_before);
-      points.push(b.defender_elo_after);
+      if (points.length === 0) points.push(conservativeRating(b.defender_elo_before, b.defender_rd_before));
+      points.push(conservativeRating(b.defender_elo_after, b.defender_rd_after));
     }
   }
   return points;

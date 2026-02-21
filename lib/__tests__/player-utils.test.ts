@@ -91,6 +91,87 @@ describe('buildEloHistory', () => {
     // Reversed: battle 1 (as challenger 1200->1216), battle 2 (as defender 1216->1200)
     expect(buildEloHistory(1, battles)).toEqual([1200, 1216, 1200]);
   });
+
+  it('computes conservative rating when RD values are present', () => {
+    const battles = [
+      makeBattle({
+        id: 1,
+        challenger_id: 1,
+        defender_id: 2,
+        challenger_elo_before: 1200,
+        challenger_elo_after: 1232,
+        challenger_rd_before: 350,
+        challenger_rd_after: 320,
+        created_at: new Date('2025-01-01'),
+      }),
+    ];
+    // conservative = elo - 2*rd
+    // before: 1200 - 2*350 = 500
+    // after: 1232 - 2*320 = 592
+    expect(buildEloHistory(1, battles)).toEqual([500, 592]);
+  });
+
+  it('computes conservative rating for defender with RD values', () => {
+    const battles = [
+      makeBattle({
+        id: 1,
+        challenger_id: 2,
+        defender_id: 1,
+        defender_elo_before: 1300,
+        defender_elo_after: 1280,
+        defender_rd_before: 200,
+        defender_rd_after: 190,
+        created_at: new Date('2025-01-01'),
+      }),
+    ];
+    // before: 1300 - 2*200 = 900
+    // after: 1280 - 2*190 = 900
+    expect(buildEloHistory(1, battles)).toEqual([900, 900]);
+  });
+
+  it('falls back to raw elo when RD is null (pre-migration)', () => {
+    const battles = [
+      makeBattle({
+        id: 1,
+        challenger_id: 1,
+        defender_id: 2,
+        challenger_elo_before: 1200,
+        challenger_elo_after: 1216,
+        challenger_rd_before: null,
+        challenger_rd_after: null,
+        created_at: new Date('2025-01-01'),
+      }),
+    ];
+    expect(buildEloHistory(1, battles)).toEqual([1200, 1216]);
+  });
+
+  it('handles mixed null and non-null RD across battles', () => {
+    const battles = [
+      makeBattle({
+        id: 2,
+        challenger_id: 1,
+        defender_id: 2,
+        challenger_elo_before: 1216,
+        challenger_elo_after: 1248,
+        challenger_rd_before: 320,
+        challenger_rd_after: 300,
+        created_at: new Date('2025-01-02'),
+      }),
+      makeBattle({
+        id: 1,
+        challenger_id: 1,
+        defender_id: 2,
+        challenger_elo_before: 1200,
+        challenger_elo_after: 1216,
+        challenger_rd_before: null,
+        challenger_rd_after: null,
+        created_at: new Date('2025-01-01'),
+      }),
+    ];
+    // Battle 1 (null RD): raw 1200 -> 1216
+    // Battle 2 (RD present): conservative 1216-2*320=576 -> 1248-2*300=648
+    expect(buildEloHistory(1, battles)).toEqual([1200, 1216, 648]);
+  });
 });
 
 describe('asciiSparkline', () => {

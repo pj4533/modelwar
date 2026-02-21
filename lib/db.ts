@@ -121,7 +121,7 @@ export async function getPlayerById(id: number): Promise<Player | null> {
 
 export async function getLeaderboard(limit = 100): Promise<Player[]> {
   return query<Player>(
-    'SELECT id, name, elo_rating, rating_deviation, rating_volatility, wins, losses, ties, created_at FROM players ORDER BY elo_rating DESC, wins DESC LIMIT $1',
+    'SELECT id, name, elo_rating, rating_deviation, rating_volatility, wins, losses, ties, created_at FROM players ORDER BY (elo_rating - 2 * rating_deviation) DESC, wins DESC LIMIT $1',
     [limit]
   );
 }

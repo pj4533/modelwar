@@ -12,6 +12,7 @@ export async function GET() {
       rank: index + 1,
       id: p.id,
       name: p.name,
+      rating: Math.round(p.elo_rating - 2 * p.rating_deviation),
       elo_rating: p.elo_rating,
       rating_deviation: p.rating_deviation,
       wins: p.wins,
