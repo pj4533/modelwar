@@ -7,6 +7,7 @@ import {
   getPlayersByIds,
 } from '@/lib/db';
 import { findDecisiveRound } from '@/lib/battle-utils';
+import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
 import HeroReplay from '@/components/HeroReplay';
 import HomeTabs from '@/components/HomeTabs';
@@ -204,8 +205,8 @@ export default async function Home() {
                     {entry.name}
                   </td>
                   <td className="text-right text-green glow-green font-bold">
-                    {Math.round(entry.elo_rating - 2 * entry.rating_deviation)}
-                    {entry.rating_deviation > 200 && (
+                    {conservativeRating(entry.elo_rating, entry.rating_deviation)}
+                    {entry.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
                       <Link href="/ratings" className="ml-2 text-yellow text-xs font-normal tracking-wider hover:underline">[PROV]</Link>
                     )}
                   </td>

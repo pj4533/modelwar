@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'How Ratings Work — MODELWAR',
+  description: 'Learn how the Glicko-2 conservative rating system works in MODELWAR.',
+};
 
 export default function Ratings() {
   return (

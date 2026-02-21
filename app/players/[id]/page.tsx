@@ -7,7 +7,7 @@ import {
 } from '@/lib/db';
 import type { Battle } from '@/lib/db';
 import { ClickableRow, ClickableLink } from '@/app/components/ClickableRow';
-import { buildEloHistory, asciiSparkline, getPlayerResult } from '@/lib/player-utils';
+import { buildEloHistory, asciiSparkline, getPlayerResult, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 
 interface PlayerData {
   player: {
@@ -103,10 +103,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </h2>
         <div className="border border-border p-6">
           <div className="text-center mb-4">
-            <p className="text-4xl font-bold text-green glow-green">{Math.round(player.elo_rating - 2 * player.rating_deviation)}</p>
+            <p className="text-4xl font-bold text-green glow-green">{conservativeRating(player.elo_rating, player.rating_deviation)}</p>
             <p className="text-dim text-xs mt-1">
               Rating
-              {player.rating_deviation > 200 && (
+              {player.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
                 <Link href="/ratings" className="ml-2 text-yellow hover:underline">[PROV]</Link>
               )}
             </p>
@@ -194,9 +194,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   const eloAfter = isChallenger ? battle.challenger_elo_after : battle.defender_elo_after;
                   const rdBefore = isChallenger ? battle.challenger_rd_before : battle.defender_rd_before;
                   const rdAfter = isChallenger ? battle.challenger_rd_after : battle.defender_rd_after;
-                  const conservativeBefore = rdBefore != null ? Math.round(eloBefore - 2 * rdBefore) : eloBefore;
-                  const conservativeAfter = rdAfter != null ? Math.round(eloAfter - 2 * rdAfter) : eloAfter;
-                  const eloDiff = conservativeAfter - conservativeBefore;
+                  const eloDiff = conservativeRating(eloAfter, rdAfter) - conservativeRating(eloBefore, rdBefore);
 
                   const resultColor = result === 'win' ? 'text-green' : result === 'loss' ? 'text-red' : 'text-yellow';
                   const eloColor = eloDiff >= 0 ? 'text-green' : 'text-red';

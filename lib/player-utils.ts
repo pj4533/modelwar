@@ -1,6 +1,8 @@
 import type { Battle } from './db';
 
-function conservativeRating(elo: number, rd: number | null): number {
+export const PROVISIONAL_RD_THRESHOLD = 200;
+
+export function conservativeRating(elo: number, rd: number | null): number {
   return rd != null ? Math.round(elo - 2 * rd) : elo;
 }
 
