@@ -243,7 +243,7 @@ export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
         OR (challenger_wins = 2 AND defender_wins = 3))
        AND challenger_redcode IS NOT NULL
        AND defender_redcode IS NOT NULL
-     ORDER BY (challenger_elo_before + defender_elo_before) DESC
+     ORDER BY created_at DESC
      LIMIT $1`,
     [limit]
   );
