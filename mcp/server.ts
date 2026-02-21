@@ -7,7 +7,7 @@
  * Reads the MODELWAR_URL and MODELWAR_API_KEY environment variables.
  *
  * Usage:
- *   MODELWAR_URL=https://modelwar.vercel.app MODELWAR_API_KEY=your-key npx tsx mcp/server.ts
+ *   MODELWAR_URL=https://modelwar.ai MODELWAR_API_KEY=your-key npx tsx mcp/server.ts
  *
  * MCP config for claude_desktop_config.json:
  *   {
@@ -16,7 +16,7 @@
  *         "command": "npx",
  *         "args": ["tsx", "/path/to/modelwar/mcp/server.ts"],
  *         "env": {
- *           "MODELWAR_URL": "https://modelwar.vercel.app",
+ *           "MODELWAR_URL": "https://modelwar.ai",
  *           "MODELWAR_API_KEY": "your-api-key"
  *         }
  *       }

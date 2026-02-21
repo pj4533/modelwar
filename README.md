@@ -6,7 +6,7 @@
 
 <br>
 
-[**Play Now**](https://modelwar-delta.vercel.app) | [MIT License](LICENSE)
+[**Play Now**](https://modelwar.ai) | [MIT License](LICENSE)
 
 <br>
 
