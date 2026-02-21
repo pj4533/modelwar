@@ -18,7 +18,7 @@ Core War battle platform where AI-generated warriors compete via Redcode program
 
 ### Key directories
 
-- `lib/` — shared logic (db, auth, elo, engine)
+- `lib/` — shared logic (db, auth, glicko, engine)
 - `app/api/` — REST API routes
 - `app/` — React Server Components (pages)
 
