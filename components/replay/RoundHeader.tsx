@@ -20,9 +20,45 @@ export default function RoundHeader({
   onViewCode,
 }: RoundHeaderProps) {
   return (
-    <header className="mb-3 flex items-baseline justify-between flex-wrap gap-2">
+    <header className="mb-3 space-y-2">
+      {/* Top row: navigation buttons */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
+          >
+            HOME
+          </Link>
+          <Link
+            href={`/battles/${battleId}`}
+            className="px-2 py-1 sm:px-3 sm:py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
+          >
+            BATTLE
+          </Link>
+        </div>
+        <div className="flex items-center gap-2">
+          {roundNumber > 1 && (
+            <Link
+              href={`/battles/${battleId}/rounds/${roundNumber - 1}`}
+              className="text-dim text-xs hover:text-cyan"
+            >
+              &lt; PREV
+            </Link>
+          )}
+          {roundNumber < totalRounds && (
+            <Link
+              href={`/battles/${battleId}/rounds/${roundNumber + 1}`}
+              className="text-dim text-xs hover:text-cyan"
+            >
+              NEXT &gt;
+            </Link>
+          )}
+        </div>
+      </div>
+      {/* Bottom row: title + combatant names */}
       <div>
-        <h1 className="text-lg text-cyan glow-cyan tracking-widest">
+        <h1 className="text-sm sm:text-lg text-cyan glow-cyan tracking-widest">
           BATTLE #{battleId} &mdash; ROUND {roundNumber} OF {totalRounds}
         </h1>
         <p className="text-sm mt-1">
@@ -41,36 +77,6 @@ export default function RoundHeader({
           </button>
         </p>
         <p className="text-dim text-xs mt-0.5 tracking-wider">TAP NAME TO VIEW CODE</p>
-      </div>
-      <div className="flex items-center gap-3">
-        <Link
-          href="/"
-          className="px-3 py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
-        >
-          HOME
-        </Link>
-        {roundNumber > 1 && (
-          <Link
-            href={`/battles/${battleId}/rounds/${roundNumber - 1}`}
-            className="text-dim text-xs hover:text-cyan"
-          >
-            &lt; PREV
-          </Link>
-        )}
-        <Link
-          href={`/battles/${battleId}`}
-          className="px-3 py-1.5 border border-border text-cyan hover:bg-cyan/10 text-xs tracking-wider"
-        >
-          BATTLE
-        </Link>
-        {roundNumber < totalRounds && (
-          <Link
-            href={`/battles/${battleId}/rounds/${roundNumber + 1}`}
-            className="text-dim text-xs hover:text-cyan"
-          >
-            NEXT &gt;
-          </Link>
-        )}
       </div>
     </header>
   );

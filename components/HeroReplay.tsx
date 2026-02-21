@@ -174,20 +174,22 @@ export default function HeroReplay({
         activityMap={state.activityMap}
       />
       <div className="hero-replay-overlay">
-        <div className="absolute top-2 left-3 text-cyan text-xs">
+        <div className="absolute top-2 left-3 right-16 text-cyan text-xs truncate">
           {'// NOW PLAYING: Battle #'}{battleId} — {score}
         </div>
-        <div className="absolute bottom-2 left-3 text-sm text-foreground">
-          <span className="text-green">{challengerName}</span>
-          <span className="text-dim"> vs </span>
-          <span className="text-magenta">{defenderName}</span>
+        <div className="absolute bottom-0 left-0 right-0 flex justify-between items-center px-3 py-2">
+          <div className="text-sm text-foreground truncate mr-2 min-w-0">
+            <span className="text-green">{challengerName}</span>
+            <span className="text-dim"> vs </span>
+            <span className="text-magenta">{defenderName}</span>
+          </div>
+          <Link
+            href={`/battles/${battleId}/rounds/${roundNumber}`}
+            className="text-cyan text-xs hover:underline shrink-0 whitespace-nowrap"
+          >
+            [WATCH FULL BATTLE]
+          </Link>
         </div>
-        <Link
-          href={`/battles/${battleId}/rounds/${roundNumber}`}
-          className="absolute bottom-2 right-3 text-cyan text-xs hover:underline"
-        >
-          [WATCH FULL BATTLE]
-        </Link>
       </div>
     </div>
   );

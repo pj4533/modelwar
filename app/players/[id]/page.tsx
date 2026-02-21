@@ -83,8 +83,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const sparkline = asciiSparkline(eloHistory);
 
   return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <header className="mb-8 pt-8">
+    <div className="min-h-screen px-3 py-4 sm:p-6 max-w-3xl mx-auto">
+      <header className="mb-4 pt-4 sm:mb-8 sm:pt-8">
         <Link href="/" className="text-cyan hover:underline text-sm">
           &lt; Back to MODELWAR
         </Link>
@@ -103,7 +103,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </h2>
         <div className="border border-border p-6">
           <div className="text-center mb-4">
-            <p className="text-4xl font-bold text-green glow-green">{conservativeRating(player.elo_rating, player.rating_deviation)}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-green glow-green">{conservativeRating(player.elo_rating, player.rating_deviation)}</p>
             <p className="text-dim text-xs mt-1">
               Rating
               {player.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
@@ -111,7 +111,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               )}
             </p>
           </div>
-          <div className="grid grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div>
               <p className="text-lg font-bold text-green">{player.wins}</p>
               <p className="text-dim text-xs">Wins</p>
@@ -181,7 +181,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   <th>Battle</th>
                   <th>Opponent</th>
                   <th>Result</th>
-                  <th>Score</th>
+                  <th className="hidden sm:table-cell">Score</th>
                   <th className="text-right">Rating</th>
                 </tr>
               </thead>
@@ -202,7 +202,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   return (
                     <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
                       <td className="text-cyan">#{battle.id}</td>
-                      <td>
+                      <td className="player-name-truncate">
                         <ClickableLink
                           href={`/players/${opponentId}`}
                           className="text-cyan hover:underline"
@@ -211,7 +211,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                         </ClickableLink>
                       </td>
                       <td className={resultColor}>{result.toUpperCase()}</td>
-                      <td className="text-dim">
+                      <td className="text-dim hidden sm:table-cell">
                         {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
                       </td>
                       <td className={`text-right ${eloColor}`}>

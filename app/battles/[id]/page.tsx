@@ -101,8 +101,8 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
     : 'TIE';
 
   return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <header className="mb-8 pt-8">
+    <div className="min-h-screen px-3 py-4 sm:p-6 max-w-3xl mx-auto">
+      <header className="mb-4 pt-4 sm:mb-8 sm:pt-8">
         <Link href="/" className="text-cyan hover:underline text-sm">
           &lt; Back to MODELWAR
         </Link>
@@ -116,7 +116,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
 
       {/* Result banner */}
       <div className="border border-border p-6 mb-8 text-center">
-        <p className={`text-3xl font-bold ${resultColor} tracking-wider`}>
+        <p className={`text-xl sm:text-3xl font-bold ${resultColor} tracking-wider`}>
           {resultText}
         </p>
         <p className="text-dim text-sm mt-2">
@@ -146,7 +146,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
             return (
               <div
                 key={round.round}
-                className="flex items-center justify-between px-4 py-3 border-b border-border last:border-b-0"
+                className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-border last:border-b-0"
               >
                 <span className="text-dim text-sm">ROUND {round.round}</span>
                 <span className={`text-sm font-bold ${roundColor}`}>{roundLabel}</span>
@@ -163,7 +163,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Combatants */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {/* Challenger */}
         <div className="border border-border p-4">
           <p className="text-xs text-dim uppercase tracking-wider mb-2">Challenger</p>

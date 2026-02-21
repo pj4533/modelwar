@@ -48,7 +48,7 @@ export default function PlaybackControls({
   }
 
   return (
-    <div className="border border-border p-3 space-y-2">
+    <div className="border border-border p-2 sm:p-3 space-y-2">
       {/* Progress bar */}
       <div className="w-full bg-surface h-1.5 rounded overflow-hidden">
         <div
@@ -57,43 +57,35 @@ export default function PlaybackControls({
         />
       </div>
 
-      {/* Main controls row */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Row 1: warrior info + transport controls */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         {/* Left: warrior info */}
         <div className="flex items-center gap-3 text-xs min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-green inline-block shrink-0" style={{ boxShadow: '0 0 6px #39ff14' }} />
-            <span className="text-green truncate max-w-[80px]">{challengerName}</span>
+            <span className="text-green truncate max-w-[60px] sm:max-w-[80px]">{challengerName}</span>
             {warriorStatus('challenger')}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-magenta inline-block shrink-0" style={{ boxShadow: '0 0 6px #ff00ff' }} />
-            <span className="text-magenta truncate max-w-[80px]">{defenderName}</span>
+            <span className="text-magenta truncate max-w-[60px] sm:max-w-[80px]">{defenderName}</span>
             {warriorStatus('defender')}
           </div>
         </div>
-
-        {/* Center: cycle counter */}
-        <p className={`text-lg tracking-wider whitespace-nowrap font-mono ${
-          state.status === 'finished' ? 'text-cyan glow-cyan' : 'text-cyan'
-        }`}>
-          CYCLE {formatCycle(state.cycle)}
-          <span className="text-dim"> / {formatCycle(state.endCycle ?? state.maxCycles)}</span>
-        </p>
 
         {/* Right: transport controls */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={isPlaying ? onPause : onPlay}
             disabled={!canInteract}
-            className="px-3 py-1.5 border border-border text-cyan hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs tracking-wider"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 border border-border text-cyan hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs tracking-wider"
           >
             {isPlaying ? 'PAUSE' : 'PLAY'}
           </button>
           <button
             onClick={onStepForward}
             disabled={!canInteract || isPlaying}
-            className="px-3 py-1.5 border border-border text-dim hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 border border-border text-dim hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
             title="Step forward 1 cycle"
           >
             STEP
@@ -101,13 +93,21 @@ export default function PlaybackControls({
           <button
             onClick={onJumpToEnd}
             disabled={!canInteract}
-            className="px-3 py-1.5 border border-border text-dim hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 border border-border text-dim hover:bg-cyan/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
             title="Jump to end"
           >
             END
           </button>
         </div>
       </div>
+
+      {/* Row 2: cycle counter centered */}
+      <p className={`text-sm sm:text-lg tracking-wider whitespace-nowrap font-mono text-center ${
+        state.status === 'finished' ? 'text-cyan glow-cyan' : 'text-cyan'
+      }`}>
+        CYCLE {formatCycle(state.cycle)}
+        <span className="text-dim"> / {formatCycle(state.endCycle ?? state.maxCycles)}</span>
+      </p>
 
       {/* Result footer when finished */}
       {isFinished && (

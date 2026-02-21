@@ -166,7 +166,7 @@ export default async function Home() {
 
   const rankingsContent = (
     <>
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-4">
         <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
           {'// Leaderboard'} {totalPlayers > 20 ? '(Top 20)' : ''}
         </h2>
@@ -201,7 +201,7 @@ export default async function Home() {
               {leaderboard.map((entry) => (
                 <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
                   <td className="text-dim">{entry.rank}</td>
-                  <td className={entry.rank <= 3 ? 'text-cyan glow-cyan' : ''}>
+                  <td className={`${entry.rank <= 3 ? 'text-cyan glow-cyan' : ''} player-name-truncate`}>
                     {entry.name}
                   </td>
                   <td className="text-right text-green glow-green font-bold">
@@ -238,7 +238,7 @@ export default async function Home() {
               <tr>
                 <th>Matchup</th>
                 <th className="text-center">Score</th>
-                <th className="text-right">Avg Rating</th>
+                <th className="text-right hidden sm:table-cell">Avg Rating</th>
                 <th>Result</th>
                 <th className="text-right">Replay</th>
               </tr>
@@ -251,13 +251,13 @@ export default async function Home() {
                     href={`/battles/${fb.id}/rounds/${fb.decisiveRound}`}
                     key={fb.id}
                   >
-                    <td>
+                    <td className="player-name-truncate">
                       <span className="text-green">{fb.challengerName}</span>
                       <span className="text-dim"> vs </span>
                       <span className="text-magenta">{fb.defenderName}</span>
                     </td>
                     <td className="text-center text-cyan">{fb.score}</td>
-                    <td className="text-right text-dim">{fb.avgElo}</td>
+                    <td className="text-right text-dim hidden sm:table-cell">{fb.avgElo}</td>
                     <td className={r.color}>{r.text}</td>
                     <td className="text-right text-cyan text-xs">WATCH</td>
                   </ClickableRow>
@@ -284,9 +284,9 @@ export default async function Home() {
           <table>
             <thead>
               <tr>
-                <th>ID</th>
+                <th className="hidden sm:table-cell">ID</th>
                 <th>Challenger</th>
-                <th className="text-center">vs</th>
+                <th className="text-center hidden sm:table-cell">vs</th>
                 <th>Defender</th>
                 <th>Score</th>
                 <th>Result</th>
@@ -297,12 +297,12 @@ export default async function Home() {
                 const r = resultLabel(battle.result);
                 return (
                   <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
-                    <td className="text-cyan">#{battle.id}</td>
-                    <td className={battle.result === 'challenger_win' ? 'text-green' : ''}>
+                    <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
+                    <td className={`${battle.result === 'challenger_win' ? 'text-green' : ''} player-name-truncate`}>
                       {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
                     </td>
-                    <td className="text-center text-dim">vs</td>
-                    <td className={battle.result === 'defender_win' ? 'text-green' : ''}>
+                    <td className="text-center text-dim hidden sm:table-cell">vs</td>
+                    <td className={`${battle.result === 'defender_win' ? 'text-green' : ''} player-name-truncate`}>
                       {playerNames[battle.defender_id] || `Player #${battle.defender_id}`}
                     </td>
                     <td className="text-dim">
@@ -320,10 +320,10 @@ export default async function Home() {
   );
 
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto">
+    <div className="min-h-screen px-3 py-4 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <header className="text-center mb-12 pt-8">
-        <h1 className="text-5xl font-bold text-cyan pulse-glow mb-2 tracking-widest">
+      <header className="text-center mb-6 pt-4 sm:mb-12 sm:pt-8">
+        <h1 className="text-3xl sm:text-5xl font-bold text-cyan pulse-glow mb-2 tracking-widest">
           MODELWAR
         </h1>
         <p className="text-dim text-sm">
@@ -351,7 +351,7 @@ export default async function Home() {
 
       {/* Hero Replay */}
       {heroBattle && (
-        <section className="mb-12">
+        <section className="mb-6 sm:mb-12">
           <HeroReplay
             battleId={heroBattle.id}
             roundNumber={heroBattle.decisiveRound}
@@ -363,7 +363,7 @@ export default async function Home() {
       )}
 
       {/* Tabbed Content */}
-      <section className="mb-12">
+      <section className="mb-6 sm:mb-12">
         <HomeTabs
           rankingsContent={rankingsContent}
           featuredContent={featuredContent}

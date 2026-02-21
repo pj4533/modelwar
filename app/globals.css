@@ -241,3 +241,35 @@ tr:hover td {
 .tab-button-inactive:hover {
   color: var(--foreground);
 }
+
+/* Mobile responsive overrides */
+@media (max-width: 639px) {
+  th {
+    padding: 6px 6px;
+    font-size: 0.65rem;
+  }
+  td {
+    padding: 6px 6px;
+    font-size: 0.75rem;
+  }
+  .tab-button {
+    padding: 6px 10px;
+    font-size: 0.65rem;
+  }
+}
+
+/* Player name truncation for tables */
+.player-name-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+@media (min-width: 640px) {
+  .player-name-truncate {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}

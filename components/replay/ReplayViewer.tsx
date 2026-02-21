@@ -192,7 +192,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
   return (
     <>
-      <div className="h-screen flex flex-col p-4 max-w-4xl mx-auto">
+      <div className="h-screen flex flex-col p-2 sm:p-4 max-w-4xl mx-auto">
         <RoundHeader
           battleId={battleId}
           roundNumber={roundNumber}
@@ -209,7 +209,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
           />
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2 sm:mt-3">
           <PlaybackControls
             state={state}
             onPlay={handlePlay}
