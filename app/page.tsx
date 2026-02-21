@@ -127,8 +127,9 @@ async function fetchFeaturedBattles(): Promise<{
       };
     });
 
+    const heroIndex = Math.floor(Math.random() * featured.length);
     return {
-      heroBattle: featured[0],
+      heroBattle: featured[heroIndex],
       featuredBattles: featured,
     };
   } catch {
