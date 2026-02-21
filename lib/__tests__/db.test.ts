@@ -259,4 +259,17 @@ describe('Battle queries', () => {
       [10]
     );
   });
+
+  it('getFeaturedBattles: returns close battles with redcode ordered by combined ELO', async () => {
+    const battles = [makeBattle({ challenger_wins: 3, defender_wins: 2 })];
+    mockQuery.mockResolvedValueOnce({ rows: battles });
+
+    const result = await db.getFeaturedBattles();
+
+    expect(result).toEqual(battles);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('challenger_wins = 3 AND defender_wins = 2'),
+      [5]
+    );
+  });
 });

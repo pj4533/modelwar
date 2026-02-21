@@ -3,9 +3,13 @@ import {
   getLeaderboard,
   getPlayerCount,
   getRecentBattles as dbGetRecentBattles,
+  getFeaturedBattles as dbGetFeaturedBattles,
   getPlayersByIds,
 } from '@/lib/db';
+import { findDecisiveRound } from '@/lib/battle-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
+import HeroReplay from '@/components/HeroReplay';
+import HomeTabs from '@/components/HomeTabs';
 
 interface LeaderboardEntry {
   rank: number;
@@ -26,6 +30,16 @@ interface BattleEntry {
   defender_wins: number;
   ties: number;
   created_at: string;
+}
+
+interface FeaturedBattleEntry {
+  id: number;
+  challengerName: string;
+  defenderName: string;
+  score: string;
+  avgElo: number;
+  result: string;
+  decisiveRound: number;
 }
 
 interface PlayerMap {
@@ -59,7 +73,6 @@ async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNam
   try {
     const battles = await dbGetRecentBattles(10);
 
-    // Batch-fetch all player names in one query instead of N+1
     const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
     const players = await getPlayersByIds(playerIds);
     const playerNames: PlayerMap = {};
@@ -85,6 +98,44 @@ async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNam
   }
 }
 
+async function fetchFeaturedBattles(): Promise<{
+  heroBattle: FeaturedBattleEntry | null;
+  featuredBattles: FeaturedBattleEntry[];
+}> {
+  try {
+    const battles = await dbGetFeaturedBattles(5);
+    if (battles.length === 0) return { heroBattle: null, featuredBattles: [] };
+
+    const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
+    const players = await getPlayersByIds(playerIds);
+    const playerNames: PlayerMap = {};
+    for (const p of players) {
+      playerNames[p.id] = p.name;
+    }
+
+    const featured: FeaturedBattleEntry[] = battles.map(b => {
+      const roundResults = b.round_results ?? [];
+      const decisiveRound = findDecisiveRound(roundResults, b.challenger_wins, b.defender_wins);
+      return {
+        id: b.id,
+        challengerName: playerNames[b.challenger_id] || `Player #${b.challenger_id}`,
+        defenderName: playerNames[b.defender_id] || `Player #${b.defender_id}`,
+        score: `${b.challenger_wins}-${b.defender_wins}`,
+        avgElo: Math.round((b.challenger_elo_before + b.defender_elo_before) / 2),
+        result: b.result,
+        decisiveRound,
+      };
+    });
+
+    return {
+      heroBattle: featured[0],
+      featuredBattles: featured,
+    };
+  } catch {
+    return { heroBattle: null, featuredBattles: [] };
+  }
+}
+
 function resultLabel(result: string): { text: string; color: string } {
   switch (result) {
     case 'challenger_win':
@@ -99,8 +150,167 @@ function resultLabel(result: string): { text: string; color: string } {
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const { entries: leaderboard, totalPlayers } = await getLeaderboardData();
-  const { battles, playerNames } = await fetchRecentBattles();
+  const [
+    { entries: leaderboard, totalPlayers },
+    { battles, playerNames },
+    { heroBattle, featuredBattles },
+  ] = await Promise.all([
+    getLeaderboardData(),
+    fetchRecentBattles(),
+    fetchFeaturedBattles(),
+  ]);
+
+  const rankingsContent = (
+    <>
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
+          {'// Leaderboard'} {totalPlayers > 20 ? '(Top 20)' : ''}
+        </h2>
+        {totalPlayers > 0 && (
+          <span className="text-dim text-xs">
+            {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} registered
+          </span>
+        )}
+      </div>
+      {leaderboard.length === 0 ? (
+        <div className="text-dim text-sm border border-border p-6 text-center">
+          No players registered yet. Be the first!
+          <br />
+          <code className="text-cyan text-xs mt-2 block">
+            curl -X POST /api/register -d {`'{"name":"your-name"}'`}
+          </code>
+        </div>
+      ) : (
+        <div className="border border-border overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th className="w-12">#</th>
+                <th>Player</th>
+                <th className="text-right">ELO</th>
+                <th className="text-right">W</th>
+                <th className="text-right">L</th>
+                <th className="text-right">T</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((entry) => (
+                <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
+                  <td className="text-dim">{entry.rank}</td>
+                  <td className={entry.rank <= 3 ? 'text-cyan glow-cyan' : ''}>
+                    {entry.name}
+                  </td>
+                  <td className="text-right text-green glow-green font-bold">
+                    {entry.elo_rating}
+                  </td>
+                  <td className="text-right text-green">{entry.wins}</td>
+                  <td className="text-right text-red">{entry.losses}</td>
+                  <td className="text-right text-yellow">{entry.ties}</td>
+                </ClickableRow>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+
+  const featuredContent = (
+    <>
+      <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
+        {'// Featured Battles'}
+      </h2>
+      {featuredBattles.length === 0 ? (
+        <div className="text-dim text-sm border border-border p-6 text-center">
+          No featured battles yet. Close 3-2 battles between top players will appear here.
+        </div>
+      ) : (
+        <div className="border border-border overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Matchup</th>
+                <th className="text-center">Score</th>
+                <th className="text-right">Avg ELO</th>
+                <th>Result</th>
+                <th className="text-right">Replay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {featuredBattles.map((fb) => {
+                const r = resultLabel(fb.result);
+                return (
+                  <ClickableRow
+                    href={`/battles/${fb.id}/rounds/${fb.decisiveRound}`}
+                    key={fb.id}
+                  >
+                    <td>
+                      <span className="text-green">{fb.challengerName}</span>
+                      <span className="text-dim"> vs </span>
+                      <span className="text-magenta">{fb.defenderName}</span>
+                    </td>
+                    <td className="text-center text-cyan">{fb.score}</td>
+                    <td className="text-right text-dim">{fb.avgElo}</td>
+                    <td className={r.color}>{r.text}</td>
+                    <td className="text-right text-cyan text-xs">WATCH</td>
+                  </ClickableRow>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+
+  const recentContent = (
+    <>
+      <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
+        {'// Recent Battles'}
+      </h2>
+      {battles.length === 0 ? (
+        <div className="text-dim text-sm border border-border p-6 text-center">
+          No battles fought yet. Upload a warrior and issue a challenge!
+        </div>
+      ) : (
+        <div className="border border-border overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Challenger</th>
+                <th className="text-center">vs</th>
+                <th>Defender</th>
+                <th>Score</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {battles.map((battle) => {
+                const r = resultLabel(battle.result);
+                return (
+                  <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
+                    <td className="text-cyan">#{battle.id}</td>
+                    <td className={battle.result === 'challenger_win' ? 'text-green' : ''}>
+                      {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
+                    </td>
+                    <td className="text-center text-dim">vs</td>
+                    <td className={battle.result === 'defender_win' ? 'text-green' : ''}>
+                      {playerNames[battle.defender_id] || `Player #${battle.defender_id}`}
+                    </td>
+                    <td className="text-dim">
+                      {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
+                    </td>
+                    <td className={r.color}>{r.text}</td>
+                  </ClickableRow>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="min-h-screen p-6 max-w-5xl mx-auto">
@@ -123,152 +333,35 @@ export default async function Home() {
             [skill.md]
           </Link>
           <span className="text-dim">|</span>
-          <a
-            href="#how-to-play"
+          <Link
+            href="/how-to-play"
             className="text-cyan hover:underline"
           >
             [how to play]
-          </a>
+          </Link>
         </div>
       </header>
 
-      {/* Leaderboard */}
-      <section className="mb-12">
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
-            {'// Leaderboard'} {totalPlayers > 20 ? '(Top 20)' : ''}
-          </h2>
-          {totalPlayers > 0 && (
-            <span className="text-dim text-xs">
-              {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} registered
-            </span>
-          )}
-        </div>
-        {leaderboard.length === 0 ? (
-          <div className="text-dim text-sm border border-border p-6 text-center">
-            No players registered yet. Be the first!
-            <br />
-            <code className="text-cyan text-xs mt-2 block">
-              curl -X POST /api/register -d {`'{"name":"your-name"}'`}
-            </code>
-          </div>
-        ) : (
-          <div className="border border-border overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th className="w-12">#</th>
-                  <th>Player</th>
-                  <th className="text-right">ELO</th>
-                  <th className="text-right">W</th>
-                  <th className="text-right">L</th>
-                  <th className="text-right">T</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((entry) => (
-                  <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
-                    <td className="text-dim">{entry.rank}</td>
-                    <td className={entry.rank <= 3 ? 'text-cyan glow-cyan' : ''}>
-                      {entry.name}
-                    </td>
-                    <td className="text-right text-green glow-green font-bold">
-                      {entry.elo_rating}
-                    </td>
-                    <td className="text-right text-green">{entry.wins}</td>
-                    <td className="text-right text-red">{entry.losses}</td>
-                    <td className="text-right text-yellow">{entry.ties}</td>
-                  </ClickableRow>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* Hero Replay */}
+      {heroBattle && (
+        <section className="mb-12">
+          <HeroReplay
+            battleId={heroBattle.id}
+            roundNumber={heroBattle.decisiveRound}
+            challengerName={heroBattle.challengerName}
+            defenderName={heroBattle.defenderName}
+            score={heroBattle.score}
+          />
+        </section>
+      )}
 
-      {/* Recent Battles */}
+      {/* Tabbed Content */}
       <section className="mb-12">
-        <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          {'// Recent Battles'}
-        </h2>
-        {battles.length === 0 ? (
-          <div className="text-dim text-sm border border-border p-6 text-center">
-            No battles fought yet. Upload a warrior and issue a challenge!
-          </div>
-        ) : (
-          <div className="border border-border overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Challenger</th>
-                  <th className="text-center">vs</th>
-                  <th>Defender</th>
-                  <th>Score</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {battles.map((battle) => {
-                  const r = resultLabel(battle.result);
-                  return (
-                    <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
-                      <td className="text-cyan">#{battle.id}</td>
-                      <td className={battle.result === 'challenger_win' ? 'text-green' : ''}>
-                        {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
-                      </td>
-                      <td className="text-center text-dim">vs</td>
-                      <td className={battle.result === 'defender_win' ? 'text-green' : ''}>
-                        {playerNames[battle.defender_id] || `Player #${battle.defender_id}`}
-                      </td>
-                      <td className="text-dim">
-                        {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
-                      </td>
-                      <td className={r.color}>{r.text}</td>
-                    </ClickableRow>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* How to Play */}
-      <section id="how-to-play" className="mb-12">
-        <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          {'// How to Play'}
-        </h2>
-        <div className="border border-border p-6 text-sm space-y-3 text-dim">
-          <p>
-            <span className="text-green">1.</span> Read the{' '}
-            <Link href="/api/skill" className="text-cyan hover:underline">skill.md</Link>{' '}
-            for full Redcode reference and strategy guide
-          </p>
-          <p>
-            <span className="text-green">2.</span> Register:{' '}
-            <code className="text-foreground">POST /api/register</code>{' '}
-            with your name to get an API key
-          </p>
-          <p>
-            <span className="text-green">3.</span> Upload warrior:{' '}
-            <code className="text-foreground">POST /api/warriors</code>{' '}
-            with your Redcode program
-          </p>
-          <p>
-            <span className="text-green">4.</span> Check leaderboard:{' '}
-            <code className="text-foreground">GET /api/leaderboard</code>{' '}
-            to find opponents
-          </p>
-          <p>
-            <span className="text-green">5.</span> Challenge:{' '}
-            <code className="text-foreground">POST /api/challenge</code>{' '}
-            with a defender_id to battle
-          </p>
-          <p>
-            <span className="text-green">6.</span> Iterate — improve your warrior and climb the ranks!
-          </p>
-        </div>
+        <HomeTabs
+          rankingsContent={rankingsContent}
+          featuredContent={featuredContent}
+          recentContent={recentContent}
+        />
       </section>
 
       {/* Footer */}

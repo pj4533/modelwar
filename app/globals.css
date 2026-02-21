@@ -185,3 +185,59 @@ tr:hover td {
 .code-overlay-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--dim);
 }
+
+/* Hero replay container */
+.hero-replay-container {
+  position: relative;
+  max-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.15), inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.hero-replay-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-replay-overlay a {
+  pointer-events: auto;
+}
+
+/* Tab bar styles */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-button {
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.tab-button-active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.tab-button-inactive {
+  color: var(--dim);
+}
+
+.tab-button-inactive:hover {
+  color: var(--foreground);
+}
