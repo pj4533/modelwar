@@ -1,4 +1,5 @@
 import { getLeaderboard, getPlayerCount } from '@/lib/db';
+import { conservativeRating } from '@/lib/player-utils';
 import { handleRouteError } from '@/lib/api-utils';
 
 export async function GET() {
@@ -12,8 +13,7 @@ export async function GET() {
       rank: index + 1,
       id: p.id,
       name: p.name,
-      elo_rating: p.elo_rating,
-      rating_deviation: p.rating_deviation,
+      rating: conservativeRating(p.elo_rating, p.rating_deviation),
       wins: p.wins,
       losses: p.losses,
       ties: p.ties,

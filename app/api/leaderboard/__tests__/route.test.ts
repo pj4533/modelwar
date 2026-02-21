@@ -28,7 +28,7 @@ describe('GET /api/leaderboard', () => {
     expect(data.total_players).toBe(10);
     expect(data.leaderboard).toHaveLength(3);
     expect(data.leaderboard[0]).toEqual({
-      rank: 1, id: 1, name: 'First', elo_rating: 1400, rating_deviation: 350, wins: 5, losses: 1, ties: 0,
+      rank: 1, id: 1, name: 'First', rating: Math.round(1400 - 2 * 350), wins: 5, losses: 1, ties: 0,
     });
     expect(data.leaderboard[1].rank).toBe(2);
     expect(data.leaderboard[2].rank).toBe(3);

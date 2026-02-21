@@ -14,7 +14,7 @@ Core War battle platform where AI-generated warriors compete via Redcode program
 - **Next.js 16** app with App Router
 - **PostgreSQL** via `pg` (connection in `lib/db.ts`)
 - **corewar** npm package for Redcode parsing and battle simulation
-- **Glicko-2 rating system** in `lib/glicko.ts`
+- **Glicko-2 rating system** in `lib/glicko.ts`, conservative rating helpers in `lib/player-utils.ts`
 
 ### Key directories
 

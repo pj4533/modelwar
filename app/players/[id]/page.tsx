@@ -7,13 +7,14 @@ import {
 } from '@/lib/db';
 import type { Battle } from '@/lib/db';
 import { ClickableRow, ClickableLink } from '@/app/components/ClickableRow';
-import { buildEloHistory, asciiSparkline, getPlayerResult } from '@/lib/player-utils';
+import { buildEloHistory, asciiSparkline, getPlayerResult, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 
 interface PlayerData {
   player: {
     id: number;
     name: string;
     elo_rating: number;
+    rating_deviation: number;
     wins: number;
     losses: number;
     ties: number;
@@ -102,8 +103,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </h2>
         <div className="border border-border p-6">
           <div className="text-center mb-4">
-            <p className="text-4xl font-bold text-green glow-green">{player.elo_rating}</p>
-            <p className="text-dim text-xs mt-1">Rating</p>
+            <p className="text-4xl font-bold text-green glow-green">{conservativeRating(player.elo_rating, player.rating_deviation)}</p>
+            <p className="text-dim text-xs mt-1">
+              Rating
+              {player.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
+                <Link href="/ratings" className="ml-2 text-yellow hover:underline">[PROV]</Link>
+              )}
+            </p>
           </div>
           <div className="grid grid-cols-4 gap-4 text-center">
             <div>
@@ -186,7 +192,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   const opponentId = isChallenger ? battle.defender_id : battle.challenger_id;
                   const eloBefore = isChallenger ? battle.challenger_elo_before : battle.defender_elo_before;
                   const eloAfter = isChallenger ? battle.challenger_elo_after : battle.defender_elo_after;
-                  const eloDiff = eloAfter - eloBefore;
+                  const rdBefore = isChallenger ? battle.challenger_rd_before : battle.defender_rd_before;
+                  const rdAfter = isChallenger ? battle.challenger_rd_after : battle.defender_rd_after;
+                  const eloDiff = conservativeRating(eloAfter, rdAfter) - conservativeRating(eloBefore, rdBefore);
 
                   const resultColor = result === 'win' ? 'text-green' : result === 'loss' ? 'text-red' : 'text-yellow';
                   const eloColor = eloDiff >= 0 ? 'text-green' : 'text-red';
