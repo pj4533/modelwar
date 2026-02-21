@@ -5,7 +5,7 @@ import { makePlayer, makeWarrior, makeBattle } from '@/lib/__tests__/fixtures';
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db');
 jest.mock('@/lib/engine');
-jest.mock('@/lib/elo');
+jest.mock('@/lib/glicko');
 
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import {
@@ -16,7 +16,7 @@ import {
   withTransaction,
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
-import { calculateNewRatings } from '@/lib/elo';
+import { calculateNewRatings } from '@/lib/glicko';
 
 const mockAuth = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>;
 const mockUnauth = unauthorizedResponse as jest.MockedFunction<typeof unauthorizedResponse>;

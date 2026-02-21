@@ -7,7 +7,7 @@ import {
   withTransaction,
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
-import { calculateNewRatings, GlickoPlayer } from '@/lib/elo';
+import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {

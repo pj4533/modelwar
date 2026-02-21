@@ -1,4 +1,4 @@
-import { calculateNewRatings, DEFAULT_RATING, DEFAULT_RD, DEFAULT_VOLATILITY, GlickoPlayer } from '../elo';
+import { calculateNewRatings, DEFAULT_RATING, DEFAULT_RD, DEFAULT_VOLATILITY, GlickoPlayer } from '../glicko';
 
 const defaultPlayer: GlickoPlayer = { rating: 1200, rd: 350, volatility: 0.06 };
 const establishedPlayer: GlickoPlayer = { rating: 1400, rd: 50, volatility: 0.06 };

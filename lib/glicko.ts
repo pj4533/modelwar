@@ -26,11 +26,11 @@ export interface GlickoResult {
 
 // Scale conversion functions
 function toGlicko2(rating: number): number {
-  return (rating - 1500) / GLICKO2_SCALE;
+  return (rating - DEFAULT_RATING) / GLICKO2_SCALE;
 }
 
 function fromGlicko2(mu: number): number {
-  return mu * GLICKO2_SCALE + 1500;
+  return mu * GLICKO2_SCALE + DEFAULT_RATING;
 }
 
 function rdToGlicko2(rd: number): number {
