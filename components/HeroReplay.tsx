@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useCallback } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import type { ReplayData } from './replay/types';
 import { reducer, createInitialState } from './replay/replay-logic';
 import CoreCanvas from './replay/CoreCanvas';

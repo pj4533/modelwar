@@ -42,7 +42,7 @@ function getRateLimit(pathname: string) {
   return RATE_LIMITS[pathname] || RATE_LIMITS.default;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Only rate-limit API routes

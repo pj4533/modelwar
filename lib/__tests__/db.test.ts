@@ -177,7 +177,7 @@ describe('Battle queries', () => {
     const battle = makeBattle();
     mockQuery.mockResolvedValueOnce({ rows: [battle] });
 
-    const { id, created_at, ...input } = battle;
+    const { id: _id, created_at: _created_at, ...input } = battle;
     const result = await db.createBattle(input);
 
     expect(result).toEqual(battle);
@@ -210,7 +210,7 @@ describe('Battle queries', () => {
     });
     mockQuery.mockResolvedValueOnce({ rows: [battle] });
 
-    const { id, created_at, ...input } = battle;
+    const { id: _id, created_at: _created_at, ...input } = battle;
     await db.createBattle(input);
 
     expect(mockQuery).toHaveBeenCalledWith(
