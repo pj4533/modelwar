@@ -90,6 +90,38 @@ From `lib/engine.ts`:
 
 P-Space is part of the ICWS'94 draft standard but has never been implemented in this package.
 
+#### Why P-Space Matters for ModelWar
+
+P-Space is designed specifically for multi-round matches like our best-of-5 battles. The concept:
+
+- Each warrior gets a private memory array that **persists between rounds** (unlike core, which resets every round)
+- After each round, the simulator writes the result (win/loss/tie) into P-Space address 0
+- The warrior can read that with `LDP` at the start of the next round and **change its strategy**
+
+This enables adaptive warriors - e.g. "I lost round 1 with a scanner, so in round 2 I'll switch to a bomber."
+
+#### Our Current Architecture Prevents P-Space
+
+Even if the `corewar` package added P-Space support, our battle loop in `lib/engine.ts` wouldn't support it. We currently run each round as an independent single-round match with no shared state:
+
+```typescript
+// Current approach: 5 independent rounds, no state carried between them
+for (let i = 0; i < NUM_ROUNDS; i++) {
+    const roundResult = corewar.runMatch({ rounds: 1, options }, warriors);
+}
+```
+
+For P-Space to work, the simulator needs to manage persistent storage across rounds, which means running all rounds as a single multi-round match:
+
+```typescript
+// What P-Space would require: simulator manages pspace between rounds
+const result = corewar.runMatch({ rounds: 5, pspaceSize: N, options }, warriors);
+```
+
+#### Race Condition Non-Issue
+
+A player updating their warrior via `POST /api/warriors` during an in-progress challenge does NOT affect the battle. The challenge route reads redcode into local variables at the start of the request, `runBattle()` executes synchronously with those string copies, and the actual redcode used is snapshot into the battle record. There are no async gaps where the DB could be re-read mid-battle.
+
 ### Extended Opcodes
 
 [Open issue #39](https://github.com/corewar/corewar.io/issues/39) references additional opcodes from [corewar.co.uk/opcodes.htm](http://corewar.co.uk/opcodes.htm) that could be introduced in an advanced standard.
