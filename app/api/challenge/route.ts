@@ -7,7 +7,7 @@ import {
   withTransaction,
 } from '@/lib/db';
 import { runBattle } from '@/lib/engine';
-import { calculateNewRatings } from '@/lib/elo';
+import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
@@ -77,16 +77,26 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
     const challengerResultType = mapped.challenger;
     const defenderResultType = mapped.defender;
 
-    const { newRatingA, newRatingB } = calculateNewRatings(
-      challenger.elo_rating,
-      defender.elo_rating,
-      mapped.elo
-    );
+    const challengerGlicko: GlickoPlayer = {
+      rating: challenger.elo_rating,
+      rd: challenger.rating_deviation,
+      volatility: challenger.rating_volatility,
+    };
+    const defenderGlicko: GlickoPlayer = {
+      rating: defender.elo_rating,
+      rd: defender.rating_deviation,
+      volatility: defender.rating_volatility,
+    };
+
+    const {
+      newRatingA, newRdA, newVolatilityA,
+      newRatingB, newRdB, newVolatilityB,
+    } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
 
     // Update ratings and record battle atomically
     const battle = await withTransaction(async (client) => {
-      await updatePlayerRating(challenger.id, newRatingA, challengerResultType, client);
-      await updatePlayerRating(defender.id, newRatingB, defenderResultType, client);
+      await updatePlayerRating(challenger.id, newRatingA, newRdA, newVolatilityA, challengerResultType, client);
+      await updatePlayerRating(defender.id, newRatingB, newRdB, newVolatilityB, defenderResultType, client);
 
       return createBattle({
         challenger_id: challenger.id,
@@ -102,6 +112,10 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         defender_elo_before: defender.elo_rating,
         challenger_elo_after: newRatingA,
         defender_elo_after: newRatingB,
+        challenger_rd_before: challenger.rating_deviation,
+        challenger_rd_after: newRdA,
+        defender_rd_before: defender.rating_deviation,
+        defender_rd_after: newRdB,
         challenger_redcode: challengerWarrior.redcode,
         defender_redcode: defenderWarrior.redcode,
         round_results: battleResult.rounds,
@@ -123,12 +137,16 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
           before: challenger.elo_rating,
           after: newRatingA,
           change: newRatingA - challenger.elo_rating,
+          rd_before: challenger.rating_deviation,
+          rd_after: newRdA,
         },
         defender: {
           name: defender.name,
           before: defender.elo_rating,
           after: newRatingB,
           change: newRatingB - defender.elo_rating,
+          rd_before: defender.rating_deviation,
+          rd_after: newRdB,
         },
       },
     });

@@ -16,6 +16,7 @@ interface LeaderboardEntry {
   id: number;
   name: string;
   elo_rating: number;
+  rating_deviation: number;
   wins: number;
   losses: number;
   ties: number;
@@ -58,6 +59,7 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
         id: p.id,
         name: p.name,
         elo_rating: p.elo_rating,
+        rating_deviation: p.rating_deviation,
         wins: p.wins,
         losses: p.losses,
         ties: p.ties,
@@ -188,7 +190,7 @@ export default async function Home() {
               <tr>
                 <th className="w-12">#</th>
                 <th>Player</th>
-                <th className="text-right">ELO</th>
+                <th className="text-right">Rating</th>
                 <th className="text-right">W</th>
                 <th className="text-right">L</th>
                 <th className="text-right">T</th>
@@ -202,7 +204,7 @@ export default async function Home() {
                     {entry.name}
                   </td>
                   <td className="text-right text-green glow-green font-bold">
-                    {entry.elo_rating}
+                    {entry.elo_rating} <span className="text-dim font-normal text-xs">±{Math.round(entry.rating_deviation * 2)}</span>
                   </td>
                   <td className="text-right text-green">{entry.wins}</td>
                   <td className="text-right text-red">{entry.losses}</td>
@@ -232,7 +234,7 @@ export default async function Home() {
               <tr>
                 <th>Matchup</th>
                 <th className="text-center">Score</th>
-                <th className="text-right">Avg ELO</th>
+                <th className="text-right">Avg Rating</th>
                 <th>Result</th>
                 <th className="text-right">Replay</th>
               </tr>

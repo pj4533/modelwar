@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       name: player.name,
       api_key: player.api_key,
       elo_rating: player.elo_rating,
+      rating_deviation: player.rating_deviation,
+      rating_volatility: player.rating_volatility,
       message: 'Registration successful! Save your API key - you will need it for all authenticated requests.',
     }, { status: 201 });
   } catch (error: unknown) {

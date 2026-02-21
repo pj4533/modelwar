@@ -10,6 +10,8 @@ export const GET = withAuth(async (_request: NextRequest, player) => {
       id: player.id,
       name: player.name,
       elo_rating: player.elo_rating,
+      rating_deviation: player.rating_deviation,
+      rating_volatility: player.rating_volatility,
       wins: player.wins,
       losses: player.losses,
       ties: player.ties,

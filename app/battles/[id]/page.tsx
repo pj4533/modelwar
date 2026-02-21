@@ -171,7 +171,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
             {challenger?.name || `Player #${battle.challenger_id}`}
           </p>
           <p className="text-sm mt-2">
-            ELO: {battle.challenger_elo_before}{' '}
+            Rating: {battle.challenger_elo_before}{' '}
             <span className={battle.challenger_elo_after >= battle.challenger_elo_before ? 'text-green' : 'text-red'}>
               ({eloChange(battle.challenger_elo_before, battle.challenger_elo_after)})
             </span>
@@ -186,7 +186,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
             {defender?.name || `Player #${battle.defender_id}`}
           </p>
           <p className="text-sm mt-2">
-            ELO: {battle.defender_elo_before}{' '}
+            Rating: {battle.defender_elo_before}{' '}
             <span className={battle.defender_elo_after >= battle.defender_elo_before ? 'text-green' : 'text-red'}>
               ({eloChange(battle.defender_elo_before, battle.defender_elo_after)})
             </span>

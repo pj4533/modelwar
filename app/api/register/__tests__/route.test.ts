@@ -76,6 +76,8 @@ describe('POST /api/register', () => {
     expect(data.name).toBe(player.name);
     expect(data.api_key).toBe(player.api_key);
     expect(data.elo_rating).toBe(player.elo_rating);
+    expect(data.rating_deviation).toBe(player.rating_deviation);
+    expect(data.rating_volatility).toBe(player.rating_volatility);
     expect(data.message).toContain('Registration successful');
     expect(mockCreatePlayer).toHaveBeenCalledWith('GoodPlayer');
   });

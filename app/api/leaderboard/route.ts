@@ -13,6 +13,7 @@ export async function GET() {
       id: p.id,
       name: p.name,
       elo_rating: p.elo_rating,
+      rating_deviation: p.rating_deviation,
       wins: p.wins,
       losses: p.losses,
       ties: p.ties,

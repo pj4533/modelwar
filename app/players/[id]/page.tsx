@@ -103,7 +103,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         <div className="border border-border p-6">
           <div className="text-center mb-4">
             <p className="text-4xl font-bold text-green glow-green">{player.elo_rating}</p>
-            <p className="text-dim text-xs mt-1">ELO Rating</p>
+            <p className="text-dim text-xs mt-1">Rating</p>
           </div>
           <div className="grid grid-cols-4 gap-4 text-center">
             <div>
@@ -127,7 +127,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="mt-4 text-center">
               <p className="text-cyan text-lg tracking-wide font-mono">{sparkline}</p>
               <p className="text-dim text-xs mt-1">
-                ELO: {Math.min(...eloHistory)} — {Math.max(...eloHistory)}
+                Rating: {Math.min(...eloHistory)} — {Math.max(...eloHistory)}
               </p>
             </div>
           )}
@@ -176,7 +176,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   <th>Opponent</th>
                   <th>Result</th>
                   <th>Score</th>
-                  <th className="text-right">ELO</th>
+                  <th className="text-right">Rating</th>
                 </tr>
               </thead>
               <tbody>
