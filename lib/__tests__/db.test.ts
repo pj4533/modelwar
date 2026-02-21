@@ -80,7 +80,7 @@ describe('Player queries', () => {
 
     expect(result).toEqual(players);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('ORDER BY elo_rating DESC'),
+      expect.stringContaining('rating_deviation'),
       [100]
     );
   });
@@ -100,33 +100,33 @@ describe('Player queries', () => {
   it('updatePlayerRating: increments win column for win result', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
-    await db.updatePlayerRating(1, 1232, 'win');
+    await db.updatePlayerRating(1, 1232, 320, 0.06, 'win');
 
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE players SET elo_rating'),
-      [1232, 1, 0, 0, 1]
+      [1232, 320, 0.06, 1, 0, 0, 1]
     );
   });
 
   it('updatePlayerRating: increments loss column for loss result', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
-    await db.updatePlayerRating(2, 1168, 'loss');
+    await db.updatePlayerRating(2, 1168, 320, 0.06, 'loss');
 
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE players SET elo_rating'),
-      [1168, 0, 1, 0, 2]
+      [1168, 320, 0.06, 0, 1, 0, 2]
     );
   });
 
   it('updatePlayerRating: increments tie column for tie result', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
-    await db.updatePlayerRating(3, 1200, 'tie');
+    await db.updatePlayerRating(3, 1200, 350, 0.06, 'tie');
 
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE players SET elo_rating'),
-      [1200, 0, 0, 1, 3]
+      [1200, 350, 0.06, 0, 0, 1, 3]
     );
   });
 });
@@ -190,6 +190,8 @@ describe('Battle queries', () => {
         input.challenger_wins, input.defender_wins, input.ties,
         input.challenger_elo_before, input.defender_elo_before,
         input.challenger_elo_after, input.defender_elo_after,
+        input.challenger_rd_before, input.challenger_rd_after,
+        input.defender_rd_before, input.defender_rd_after,
         input.challenger_redcode, input.defender_redcode,
         null,
       ]

@@ -64,7 +64,10 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
     ties: tCount,
     overallResult: result,
   });
-  mockCalcRatings.mockReturnValue({ newRatingA: 1216, newRatingB: 1184 });
+  mockCalcRatings.mockReturnValue({
+    newRatingA: 1216, newRdA: 320, newVolatilityA: 0.06,
+    newRatingB: 1184, newRdB: 320, newVolatilityB: 0.06,
+  });
   mockUpdatePlayerRating.mockResolvedValue(undefined);
   mockCreateBattle.mockResolvedValue(makeBattle({ id: 42 }));
   mockWithTransaction.mockImplementation(async (fn) => fn({} as never));
@@ -185,10 +188,18 @@ describe('POST /api/challenge', () => {
     expect(data.score.defender_wins).toBe(1);
     expect(data.elo_changes.challenger.before).toBe(1200);
     expect(data.elo_changes.challenger.after).toBe(1216);
+    expect(data.elo_changes.challenger.rd_before).toBe(350);
+    expect(data.elo_changes.challenger.rd_after).toBe(320);
     expect(data.elo_changes.defender.after).toBe(1184);
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'win', expect.anything());
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'loss', expect.anything());
-    expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'a_win');
+    expect(data.elo_changes.defender.rd_before).toBe(350);
+    expect(data.elo_changes.defender.rd_after).toBe(320);
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 320, 0.06, 'win', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 320, 0.06, 'loss', expect.anything());
+    expect(mockCalcRatings).toHaveBeenCalledWith(
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      'a_win'
+    );
   });
 
   it('returns correct result mapping on defender win', async () => {
@@ -201,9 +212,13 @@ describe('POST /api/challenge', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.result).toBe('defender_win');
-    expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'b_win');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'loss', expect.anything());
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'win', expect.anything());
+    expect(mockCalcRatings).toHaveBeenCalledWith(
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      'b_win'
+    );
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 320, 0.06, 'loss', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 320, 0.06, 'win', expect.anything());
   });
 
   it('returns correct result mapping on tie', async () => {
@@ -216,8 +231,12 @@ describe('POST /api/challenge', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.result).toBe('tie');
-    expect(mockCalcRatings).toHaveBeenCalledWith(1200, 1200, 'tie');
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 'tie', expect.anything());
-    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 'tie', expect.anything());
+    expect(mockCalcRatings).toHaveBeenCalledWith(
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      { rating: 1200, rd: 350, volatility: 0.06 },
+      'tie'
+    );
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 320, 0.06, 'tie', expect.anything());
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 320, 0.06, 'tie', expect.anything());
   });
 });

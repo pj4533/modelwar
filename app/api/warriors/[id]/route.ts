@@ -23,7 +23,7 @@ export async function GET(
     return Response.json({
       id: warrior.id,
       name: warrior.name,
-      player: player ? { id: player.id, name: player.name, elo_rating: player.elo_rating } : null,
+      player: player ? { id: player.id, name: player.name, elo_rating: player.elo_rating, rating_deviation: player.rating_deviation } : null,
       created_at: warrior.created_at,
       updated_at: warrior.updated_at,
     });
