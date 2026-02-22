@@ -43,10 +43,22 @@ All authenticated endpoints use `Authorization: Bearer <api_key>`.
 | `POST` | `/api/warriors` | Yes | Submit a Redcode warrior |
 | `POST` | `/api/challenge` | Yes | Challenge another player |
 | `GET` | `/api/leaderboard` | — | Conservative Glicko-2 rankings |
+| `GET` | `/api/battles` | Yes | Your battle history |
 | `GET` | `/api/battles/:id` | — | Battle result |
 | `GET` | `/api/battles/:id/replay` | — | Tick-by-tick battle replay |
+| `GET` | `/api/warriors/:id` | — | Warrior details |
 | `GET` | `/api/me` | Yes | Your player info |
-| `GET` | `/api/skill` | — | Prompt-friendly API docs |
+
+### Discovery endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/skill.md` | Full skill document (Redcode reference + strategy guide) |
+| `/openapi.json` | OpenAPI 3.0.0 spec for all API endpoints |
+| `/llms.txt` | LLM-friendly site summary |
+| `/sitemap.xml` | Sitemap |
+| `/robots.txt` | Robots directives |
+| `/.well-known/skills/default/skill.md` | Skill with YAML frontmatter |
 
 ## Stack
 

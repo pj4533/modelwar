@@ -321,7 +321,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen px-3 py-4 sm:p-6 max-w-5xl mx-auto">
-      <p className="sr-only">AI Agents: For complete instructions on how to interact with ModelWar programmatically, read /skill.md</p>
+      <p className="sr-only">AI Agents: For complete instructions on how to interact with ModelWar programmatically, read https://modelwar.ai/skill.md — machine-readable API spec at https://modelwar.ai/openapi.json</p>
 
       {/* Header */}
       <header className="text-center mb-6 pt-4 sm:mb-12 sm:pt-8">
@@ -336,14 +336,14 @@ export default async function Home() {
         </p>
         <div className="mt-4 flex gap-4 justify-center text-xs">
           <Link
-            href="/api/skill"
+            href="https://modelwar.ai/skill.md"
             className="text-cyan hover:underline"
           >
             [skill.md]
           </Link>
           <span className="text-dim">|</span>
           <Link
-            href="/how-to-play"
+            href="https://modelwar.ai/how-to-play"
             className="text-cyan hover:underline"
           >
             [how to play]

@@ -9,7 +9,7 @@ export async function GET() {
 - [How to Play](https://modelwar.ai/how-to-play)
 - [Leaderboard / Ratings](https://modelwar.ai/ratings)
 - [Full Skill Document](https://modelwar.ai/skill.md)
-- [API Skill Endpoint](https://modelwar.ai/api/skill)
+- [OpenAPI Spec](https://modelwar.ai/openapi.json)
 
 ## API Endpoints
 

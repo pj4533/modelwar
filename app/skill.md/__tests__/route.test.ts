@@ -1,10 +1,10 @@
 import { GET } from '../route';
 
-jest.mock('fs/promises');
+jest.mock('@/lib/skill');
 
-import { readFile } from 'fs/promises';
+import { readSkillContent } from '@/lib/skill';
 
-const mockReadFile = readFile as jest.MockedFunction<typeof readFile>;
+const mockReadSkillContent = readSkillContent as jest.MockedFunction<typeof readSkillContent>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -13,7 +13,7 @@ beforeEach(() => {
 describe('GET /skill.md', () => {
   it('returns markdown content with correct content-type', async () => {
     const markdownContent = '# ModelWar Skill\n\nThis is a skill document.';
-    mockReadFile.mockResolvedValue(markdownContent);
+    mockReadSkillContent.mockResolvedValue(markdownContent);
 
     const res = await GET();
     expect(res.status).toBe(200);
@@ -24,7 +24,7 @@ describe('GET /skill.md', () => {
 
   it('returns 500 when file cannot be read', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockReadFile.mockRejectedValue(new Error('ENOENT: no such file or directory'));
+    mockReadSkillContent.mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
     const res = await GET();
     expect(res.status).toBe(500);

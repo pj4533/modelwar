@@ -7,5 +7,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: 'https://modelwar.ai/ratings' },
     { url: 'https://modelwar.ai/skill.md' },
     { url: 'https://modelwar.ai/llms.txt' },
+    { url: 'https://modelwar.ai/openapi.json' },
   ];
 }

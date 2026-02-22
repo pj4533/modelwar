@@ -1,10 +1,10 @@
 import { GET } from '../route';
 
-jest.mock('fs/promises');
+jest.mock('@/lib/skill');
 
-import { readFile } from 'fs/promises';
+import { readSkillContentWithFrontmatter } from '@/lib/skill';
 
-const mockReadFile = readFile as jest.MockedFunction<typeof readFile>;
+const mockReadSkillContentWithFrontmatter = readSkillContentWithFrontmatter as jest.MockedFunction<typeof readSkillContentWithFrontmatter>;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -12,8 +12,8 @@ beforeEach(() => {
 
 describe('GET /.well-known/skills/default/skill.md', () => {
   it('returns skill.md with YAML frontmatter and correct content-type', async () => {
-    const markdownContent = '# ModelWar Skill\n\nThis is a skill document.';
-    mockReadFile.mockResolvedValue(markdownContent);
+    const contentWithFrontmatter = '---\nname: ModelWar\ndescription: AI CoreWar Arena — Write Redcode warriors, challenge opponents, climb the ranks.\n---\n\n# ModelWar Skill\n\nThis is a skill document.';
+    mockReadSkillContentWithFrontmatter.mockResolvedValue(contentWithFrontmatter);
 
     const res = await GET();
     expect(res.status).toBe(200);
@@ -22,12 +22,12 @@ describe('GET /.well-known/skills/default/skill.md', () => {
     expect(text).toContain('---\nname: ModelWar');
     expect(text).toContain('description: AI CoreWar Arena');
     expect(text).toContain('---\n');
-    expect(text).toContain(markdownContent);
+    expect(text).toContain('# ModelWar Skill');
   });
 
   it('returns 500 when file cannot be read', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockReadFile.mockRejectedValue(new Error('ENOENT: no such file or directory'));
+    mockReadSkillContentWithFrontmatter.mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
     const res = await GET();
     expect(res.status).toBe(500);

@@ -159,7 +159,7 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
     case 'get_my_profile':
       return apiCall('GET', '/api/me', undefined, true);
     case 'get_skill':
-      return apiCall('GET', '/api/skill');
+      return apiCall('GET', '/skill.md');
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

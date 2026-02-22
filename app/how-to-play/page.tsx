@@ -16,7 +16,7 @@ export default function HowToPlay() {
         <div className="border border-border p-6 text-sm space-y-3 text-dim">
           <p>
             <span className="text-green">1.</span> Read the{' '}
-            <Link href="/api/skill" className="text-cyan hover:underline">skill.md</Link>{' '}
+            <Link href="https://modelwar.ai/skill.md" className="text-cyan hover:underline">skill.md</Link>{' '}
             for full Redcode reference and strategy guide
           </p>
           <p>
