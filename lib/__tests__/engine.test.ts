@@ -6,12 +6,14 @@ import { parseWarrior, runBattle } from '../engine';
 import { mulberry32 } from '../prng';
 
 const mockParse = corewar.parse as jest.Mock;
-const mockRunMatch = corewar.runMatch as jest.Mock;
+const mockInitialiseSimulator = corewar.initialiseSimulator as jest.Mock;
+const mockRun = corewar.run as jest.Mock;
 const mockMulberry32 = mulberry32 as jest.MockedFunction<typeof mulberry32>;
 
 beforeEach(() => {
   mockParse.mockReset();
-  mockRunMatch.mockReset();
+  mockInitialiseSimulator.mockReset();
+  mockRun.mockReset();
   mockMulberry32.mockReset();
   // Default: return a function that behaves like Math.random
   mockMulberry32.mockReturnValue(() => 0.5);
@@ -92,12 +94,17 @@ describe('runBattle', () => {
     setupValidParse();
 
     // 5 rounds: challenger wins 3, defender wins 1, tie 1
-    mockRunMatch
-      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 1: w1 wins (not swapped → challenger)
-      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 2: w1 wins (swapped → defender)
-      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] })  // round 3: w1 wins (not swapped → challenger)
-      .mockReturnValueOnce({ rounds: 1, results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }] })  // round 4: tie
-      .mockReturnValueOnce({ rounds: 1, results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }] }); // round 5: w1 wins (not swapped → challenger)
+    // Round 1 (i=0, not swapped): winnerId 0 → challenger
+    // Round 2 (i=1, swapped): winnerId 0 → defender (swapped, so 0=defender)
+    // Round 3 (i=2, not swapped): winnerId 0 → challenger
+    // Round 4 (i=3, swapped): tie
+    // Round 5 (i=4, not swapped): winnerId 0 → challenger
+    mockRun
+      .mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' })
+      .mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' })
+      .mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' })
+      .mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' })
+      .mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' });
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
@@ -111,18 +118,16 @@ describe('runBattle', () => {
   it('returns defender_win when defender wins majority of rounds', () => {
     setupValidParse();
 
-    // 5 rounds: all w2 wins
+    // 5 rounds: winnerId 1 wins all
+    // Even rounds (0,2,4): winnerId 1 = defender
+    // Odd rounds (1,3): winnerId 1 = challenger (swapped)
+    // So defender wins 3, challenger wins 2
     for (let i = 0; i < 5; i++) {
-      mockRunMatch.mockReturnValueOnce({
-        rounds: 1,
-        results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
-      });
+      mockRun.mockReturnValueOnce({ winnerId: 1, outcome: 'WIN' });
     }
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
-    // w2 wins all rounds: in even rounds (0,2,4) w2=defender, in odd rounds (1,3) w2=challenger
-    // So defender wins rounds 1,3,5 (indices 0,2,4) and challenger wins rounds 2,4 (indices 1,3)
     expect(result.overallResult).toBe('defender_win');
     expect(result.defenderWins).toBe(3);
     expect(result.challengerWins).toBe(2);
@@ -131,12 +136,9 @@ describe('runBattle', () => {
   it('returns tie when wins are equal', () => {
     setupValidParse();
 
-    // 5 rounds: all ties
+    // 5 rounds: all ties (DRAW)
     for (let i = 0; i < 5; i++) {
-      mockRunMatch.mockReturnValueOnce({
-        rounds: 1,
-        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
-      });
+      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
     }
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
@@ -165,10 +167,7 @@ describe('runBattle', () => {
     setupValidParse();
 
     for (let i = 0; i < 5; i++) {
-      mockRunMatch.mockReturnValueOnce({
-        rounds: 1,
-        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
-      });
+      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
     }
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
@@ -185,10 +184,7 @@ describe('runBattle', () => {
     setupValidParse();
 
     for (let i = 0; i < 5; i++) {
-      mockRunMatch.mockReturnValueOnce({
-        rounds: 1,
-        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
-      });
+      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
     }
 
     runBattle('CHALLENGER', 'DEFENDER');
@@ -201,29 +197,25 @@ describe('runBattle', () => {
     setupValidParse();
 
     for (let i = 0; i < 5; i++) {
-      mockRunMatch.mockReturnValueOnce({
-        rounds: 1,
-        results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
-      });
+      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
     }
 
     runBattle('CHALLENGER', 'DEFENDER');
 
-    // Verify runMatch was called 5 times
-    expect(mockRunMatch).toHaveBeenCalledTimes(5);
+    // Verify initialiseSimulator was called 5 times
+    expect(mockInitialiseSimulator).toHaveBeenCalledTimes(5);
 
     // Even-indexed rounds (0, 2, 4): challenger first
-    const call0Warriors = mockRunMatch.mock.calls[0][1];
-    const call2Warriors = mockRunMatch.mock.calls[2][1];
-    const call4Warriors = mockRunMatch.mock.calls[4][1];
+    const call0Warriors = mockInitialiseSimulator.mock.calls[0][1];
+    const call2Warriors = mockInitialiseSimulator.mock.calls[2][1];
+    const call4Warriors = mockInitialiseSimulator.mock.calls[4][1];
 
     // Odd-indexed rounds (1, 3): defender first (swapped)
-    const call1Warriors = mockRunMatch.mock.calls[1][1];
-    const call3Warriors = mockRunMatch.mock.calls[3][1];
+    const call1Warriors = mockInitialiseSimulator.mock.calls[1][1];
+    const call3Warriors = mockInitialiseSimulator.mock.calls[3][1];
 
     // For even rounds, first warrior source should be challengerParsed
     // For odd rounds, first warrior source should be defenderParsed
-    // We can verify by checking the source objects are different between even/odd calls
     expect(call0Warriors[0].source).toBe(call2Warriors[0].source);
     expect(call0Warriors[0].source).toBe(call4Warriors[0].source);
     expect(call1Warriors[0].source).toBe(call3Warriors[0].source);
@@ -232,34 +224,39 @@ describe('runBattle', () => {
     expect(call0Warriors[0].source).toBe(call1Warriors[1].source);
   });
 
+  it('passes maxTasks in options to initialiseSimulator', () => {
+    setupValidParse();
+
+    for (let i = 0; i < 5; i++) {
+      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
+    }
+
+    runBattle('CHALLENGER', 'DEFENDER');
+
+    // Verify options include maxTasks
+    const options = mockInitialiseSimulator.mock.calls[0][0];
+    expect(options).toEqual({
+      coresize: 55440,
+      maximumCycles: 500000,
+      instructionLimit: 200,
+      maxTasks: 10000,
+      minSeparation: 200,
+    });
+  });
+
   it('correctly counts wins/losses/ties across all 5 rounds', () => {
     setupValidParse();
 
-    // Round 1 (i=0, not swapped): challenger wins
-    mockRunMatch.mockReturnValueOnce({
-      rounds: 1,
-      results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
-    });
-    // Round 2 (i=1, swapped): w1 wins → w1 is defender when swapped → defender wins
-    mockRunMatch.mockReturnValueOnce({
-      rounds: 1,
-      results: [{ won: 1, drawn: 0, lost: 0 }, { won: 0, drawn: 0, lost: 1 }],
-    });
+    // Round 1 (i=0, not swapped): winnerId 0 → challenger wins
+    mockRun.mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' });
+    // Round 2 (i=1, swapped): winnerId 0 → defender wins (0=defender when swapped)
+    mockRun.mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' });
     // Round 3 (i=2, not swapped): tie
-    mockRunMatch.mockReturnValueOnce({
-      rounds: 1,
-      results: [{ won: 0, drawn: 1, lost: 0 }, { won: 0, drawn: 1, lost: 0 }],
-    });
-    // Round 4 (i=3, swapped): w2 wins → w2 is challenger when swapped → challenger wins
-    mockRunMatch.mockReturnValueOnce({
-      rounds: 1,
-      results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
-    });
-    // Round 5 (i=4, not swapped): defender wins
-    mockRunMatch.mockReturnValueOnce({
-      rounds: 1,
-      results: [{ won: 0, drawn: 0, lost: 1 }, { won: 1, drawn: 0, lost: 0 }],
-    });
+    mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
+    // Round 4 (i=3, swapped): winnerId 1 → challenger wins (1=challenger when swapped)
+    mockRun.mockReturnValueOnce({ winnerId: 1, outcome: 'WIN' });
+    // Round 5 (i=4, not swapped): winnerId 1 → defender wins
+    mockRun.mockReturnValueOnce({ winnerId: 1, outcome: 'WIN' });
 
     const result = runBattle('C', 'D');
 
