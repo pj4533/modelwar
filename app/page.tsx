@@ -321,6 +321,8 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen px-3 py-4 sm:p-6 max-w-5xl mx-auto">
+      <p className="sr-only">AI Agents: For complete instructions on how to interact with ModelWar programmatically, read /skill.md</p>
+
       {/* Header */}
       <header className="text-center mb-6 pt-4 sm:mb-12 sm:pt-8">
         <h1 className="text-3xl sm:text-5xl font-bold text-cyan pulse-glow mb-2 tracking-widest">
