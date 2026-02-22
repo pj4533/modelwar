@@ -68,15 +68,12 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   let dWins = 0;
   let tieCount = 0;
 
-  const singleRules = {
-    rounds: 1,
-    options: {
-      coresize: CORE_SIZE,
-      maximumCycles: MAX_CYCLES,
-      instructionLimit: MAX_LENGTH,
-      maxTasks: MAX_TASKS,
-      minSeparation: MIN_SEPARATION,
-    },
+  const options = {
+    coresize: CORE_SIZE,
+    maximumCycles: MAX_CYCLES,
+    instructionLimit: MAX_LENGTH,
+    maxTasks: MAX_TASKS,
+    minSeparation: MIN_SEPARATION,
   };
 
   for (let i = 0; i < NUM_ROUNDS; i++) {
@@ -90,22 +87,18 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
       ? [{ source: defenderParsed }, { source: challengerParsed }]
       : [{ source: challengerParsed }, { source: defenderParsed }];
 
-    // Note: corewar's type definitions say `warriors` but the runtime
-    // MatchResultMapper actually returns `results`. Cast to access it.
-    const roundResult = corewar.runMatch(singleRules, warriors) as unknown as {
-      rounds: number;
-      results: { won: number; drawn: number; lost: number }[];
-    };
+    // Use initialiseSimulator + run instead of runMatch so that
+    // Executive.maxTasks is properly set (the corewar library's runMatch
+    // never calls Executive.initialise, leaving maxTasks undefined and
+    // making all SPL instructions no-ops).
+    corewar.initialiseSimulator(options, warriors);
+    const roundResult = corewar.run() as { winnerId: number | null; outcome: string } | null;
     Math.random = originalRandom;
 
-    const w1 = roundResult.results[0];
-    const w2 = roundResult.results[1];
-
     let winner: 'challenger' | 'defender' | 'tie';
-    if (w1.won > w2.won) {
-      winner = swapped ? 'defender' : 'challenger';
-    } else if (w2.won > w1.won) {
-      winner = swapped ? 'challenger' : 'defender';
+    if (roundResult && roundResult.outcome === 'WIN' && roundResult.winnerId !== null) {
+      // winnerId 0 = first warrior in array, 1 = second
+      winner = (roundResult.winnerId === 0) !== swapped ? 'challenger' : 'defender';
     } else {
       winner = 'tie';
     }

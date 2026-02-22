@@ -26,6 +26,7 @@ let storedSettings: {
   coresize: number;
   maximumCycles: number;
   instructionLimit: number;
+  maxTasks: number;
   minSeparation: number;
 } | null = null;
 
@@ -110,7 +111,7 @@ self.onmessage = (e: MessageEvent) => {
           coresize: settings.coreSize,
           maximumCycles: settings.maxCycles,
           instructionLimit: settings.maxLength,
-          // maxTasks intentionally omitted — matches runMatch() behavior in engine.ts
+          maxTasks: settings.maxTasks,
           minSeparation: settings.minSeparation,
         },
         warriors,
@@ -125,6 +126,7 @@ self.onmessage = (e: MessageEvent) => {
         coresize: settings.coreSize,
         maximumCycles: settings.maxCycles,
         instructionLimit: settings.maxLength,
+        maxTasks: settings.maxTasks,
         minSeparation: settings.minSeparation,
       };
 
