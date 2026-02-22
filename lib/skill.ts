@@ -17,3 +17,8 @@ export async function readSkillContentWithFrontmatter(): Promise<string> {
   const content = await readSkillContent();
   return YAML_FRONTMATTER + content;
 }
+
+export async function readTheoryContent(): Promise<string> {
+  const theoryPath = join(process.cwd(), 'docs', 'COMPLETE_THEORY_OF_CORE_WAR.md');
+  return readFile(theoryPath, 'utf-8');
+}

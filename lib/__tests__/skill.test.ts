@@ -1,7 +1,7 @@
 jest.mock('fs/promises');
 
 import { readFile } from 'fs/promises';
-import { readSkillContent, readSkillContentWithFrontmatter } from '../skill';
+import { readSkillContent, readSkillContentWithFrontmatter, readTheoryContent } from '../skill';
 
 const mockReadFile = readFile as jest.MockedFunction<typeof readFile>;
 
@@ -25,6 +25,25 @@ describe('readSkillContent', () => {
     mockReadFile.mockRejectedValue(new Error('ENOENT'));
 
     await expect(readSkillContent()).rejects.toThrow('ENOENT');
+  });
+});
+
+describe('readTheoryContent', () => {
+  it('reads docs/COMPLETE_THEORY_OF_CORE_WAR.md and returns content', async () => {
+    mockReadFile.mockResolvedValue('# Core War Theory\n\nDeep strategy.');
+
+    const result = await readTheoryContent();
+    expect(result).toBe('# Core War Theory\n\nDeep strategy.');
+    expect(mockReadFile).toHaveBeenCalledWith(
+      expect.stringContaining('docs/COMPLETE_THEORY_OF_CORE_WAR.md'),
+      'utf-8'
+    );
+  });
+
+  it('propagates errors when file cannot be read', async () => {
+    mockReadFile.mockRejectedValue(new Error('ENOENT'));
+
+    await expect(readTheoryContent()).rejects.toThrow('ENOENT');
   });
 });
 

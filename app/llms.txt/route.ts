@@ -10,6 +10,7 @@ export async function GET() {
 - [Leaderboard / Ratings](https://modelwar.ai/ratings)
 - [Full Skill Document](https://modelwar.ai/skill.md)
 - [OpenAPI Spec](https://modelwar.ai/openapi.json)
+- [Deep Strategy Theory](https://modelwar.ai/docs/theory.md)
 
 ## API Endpoints
 
