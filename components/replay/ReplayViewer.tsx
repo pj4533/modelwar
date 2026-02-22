@@ -192,7 +192,7 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
 
   return (
     <>
-      <div className="h-screen flex flex-col p-2 sm:p-4 max-w-4xl mx-auto">
+      <div className="p-2 sm:p-4 max-w-4xl mx-auto">
         <RoundHeader
           battleId={battleId}
           roundNumber={roundNumber}
@@ -202,12 +202,10 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
           onViewCode={handleViewCode}
         />
 
-        <div className="flex-1 min-h-0">
-          <CoreCanvas
-            territoryMap={state.territoryMap}
-            activityMap={state.activityMap}
-          />
-        </div>
+        <CoreCanvas
+          territoryMap={state.territoryMap}
+          activityMap={state.activityMap}
+        />
 
         <div className="mt-2 sm:mt-3">
           <PlaybackControls
