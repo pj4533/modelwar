@@ -10,4 +10,12 @@ describe('GET /llms.txt', () => {
     expect(text).toContain('/api/register');
     expect(text).toContain('Quick Start');
   });
+
+  it('lists all public API endpoints', async () => {
+    const res = await GET();
+    const text = await res.text();
+    expect(text).toContain('GET /api/players/:id');
+    expect(text).toContain('GET /api/battles/:id/replay');
+    expect(text).toContain('GET /api/warriors/:id');
+  });
 });

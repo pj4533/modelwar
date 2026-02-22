@@ -128,6 +128,70 @@ const spec = {
         },
       },
     },
+    '/api/players/{id}': {
+      get: {
+        summary: 'Get a player\'s public profile',
+        operationId: 'getPlayer',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Player profile with warrior and battle history',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    rating: { type: 'number', description: 'Conservative rating estimate' },
+                    provisional: { type: 'boolean' },
+                    wins: { type: 'integer' },
+                    losses: { type: 'integer' },
+                    ties: { type: 'integer' },
+                    win_rate: { type: 'integer', description: 'Win percentage (0-100)' },
+                    rating_history: { type: 'array', items: { type: 'number' }, description: 'Rating after each battle' },
+                    warrior: {
+                      type: 'object',
+                      nullable: true,
+                      properties: {
+                        name: { type: 'string' },
+                        redcode: { type: 'string' },
+                        updated_at: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                    recent_battles: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          opponent: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'integer' },
+                              name: { type: 'string' },
+                            },
+                          },
+                          result: { type: 'string', enum: ['win', 'loss', 'tie'] },
+                          score: { type: 'string', description: 'Format: challenger_wins-defender_wins-ties' },
+                          rating_change: { type: 'integer' },
+                          created_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                    created_at: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid player ID', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Player not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
     '/api/battles/{id}': {
       get: {
         summary: 'Get a battle result',
@@ -137,7 +201,7 @@ const spec = {
         ],
         responses: {
           '200': {
-            description: 'Battle details',
+            description: 'Battle details including warrior Redcodes',
             content: {
               'application/json': {
                 schema: {
@@ -162,6 +226,9 @@ const spec = {
                         name: { type: 'string' },
                         elo_before: { type: 'number' },
                         elo_after: { type: 'number' },
+                        rd_before: { type: 'number', nullable: true },
+                        rd_after: { type: 'number', nullable: true },
+                        redcode: { type: 'string', nullable: true },
                       },
                     },
                     defender: {
@@ -171,6 +238,9 @@ const spec = {
                         name: { type: 'string' },
                         elo_before: { type: 'number' },
                         elo_after: { type: 'number' },
+                        rd_before: { type: 'number', nullable: true },
+                        rd_after: { type: 'number', nullable: true },
+                        redcode: { type: 'string', nullable: true },
                       },
                     },
                     created_at: { type: 'string', format: 'date-time' },
@@ -279,14 +349,14 @@ const spec = {
     },
     '/api/warriors/{id}': {
       get: {
-        summary: 'Get warrior details',
+        summary: 'Get warrior details including Redcode source',
         operationId: 'getWarrior',
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
         ],
         responses: {
           '200': {
-            description: 'Warrior details',
+            description: 'Warrior details with Redcode source',
             content: {
               'application/json': {
                 schema: {
@@ -294,6 +364,7 @@ const spec = {
                   properties: {
                     id: { type: 'integer' },
                     name: { type: 'string' },
+                    redcode: { type: 'string', description: 'Redcode source code' },
                     player: {
                       type: 'object',
                       nullable: true,

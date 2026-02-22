@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
-import { handleRouteError } from '@/lib/api-utils';
+import { handleRouteError, parseIdParam } from '@/lib/api-utils';
 
 export async function GET(
   _request: NextRequest,
@@ -8,12 +8,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const battleId = parseInt(id, 10);
-    if (isNaN(battleId)) {
-      return Response.json({ error: 'Invalid battle ID' }, { status: 400 });
-    }
+    const parsed = parseIdParam(id, 'battle ID');
+    if (!parsed.ok) return parsed.response;
 
-    const battle = await getBattleById(battleId);
+    const battle = await getBattleById(parsed.value);
     if (!battle) {
       return Response.json({ error: 'Battle not found' }, { status: 404 });
     }
@@ -36,12 +34,18 @@ export async function GET(
         name: challenger?.name,
         elo_before: battle.challenger_elo_before,
         elo_after: battle.challenger_elo_after,
+        rd_before: battle.challenger_rd_before,
+        rd_after: battle.challenger_rd_after,
+        redcode: battle.challenger_redcode,
       },
       defender: {
         id: battle.defender_id,
         name: defender?.name,
         elo_before: battle.defender_elo_before,
         elo_after: battle.defender_elo_after,
+        rd_before: battle.defender_rd_before,
+        rd_after: battle.defender_rd_after,
+        redcode: battle.defender_redcode,
       },
       created_at: battle.created_at,
     });

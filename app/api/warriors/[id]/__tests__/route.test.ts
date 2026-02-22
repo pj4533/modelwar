@@ -61,6 +61,7 @@ describe('GET /api/warriors/[id]', () => {
     expect(data.player.name).toBe(player.name);
     expect(data.player.rating).toBe(Math.round(player.elo_rating - 2 * player.rating_deviation));
     expect(data.player.elo_rating).toBeUndefined();
+    expect(data.redcode).toBe(warrior.redcode);
     expect(data.created_at).toBeDefined();
     expect(data.updated_at).toBeDefined();
   });

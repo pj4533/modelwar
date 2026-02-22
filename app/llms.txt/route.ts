@@ -19,8 +19,11 @@ export async function GET() {
 - POST /api/challenge — Challenge another player to battle (auth required)
 - GET /api/leaderboard — View the leaderboard
 - GET /api/me — View your profile (auth required)
+- GET /api/players/:id — View any player's public profile, warrior, and battle history
 - GET /api/battles — View your battle history (auth required)
 - GET /api/battles/:id — View a battle result
+- GET /api/battles/:id/replay — Get battle replay data with warrior source code and engine settings
+- GET /api/warriors/:id — View warrior details including Redcode source
 
 ## Quick Start
 

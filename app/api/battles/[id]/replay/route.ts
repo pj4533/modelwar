@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
-import { handleRouteError } from '@/lib/api-utils';
+import { handleRouteError, parseIdParam } from '@/lib/api-utils';
 import { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION } from '@/lib/engine';
 
 export async function GET(
@@ -9,12 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const battleId = parseInt(id, 10);
-    if (isNaN(battleId)) {
-      return Response.json({ error: 'Invalid battle ID' }, { status: 400 });
-    }
+    const parsed = parseIdParam(id, 'battle ID');
+    if (!parsed.ok) return parsed.response;
 
-    const battle = await getBattleById(battleId);
+    const battle = await getBattleById(parsed.value);
     if (!battle) {
       return Response.json({ error: 'Battle not found' }, { status: 404 });
     }

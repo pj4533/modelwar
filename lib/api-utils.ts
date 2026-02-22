@@ -7,6 +7,16 @@ export function handleRouteError(label: string, error: unknown): Response {
   return Response.json({ error: 'Internal server error' }, { status: 500 });
 }
 
+export type ParsedId = { ok: true; value: number } | { ok: false; response: Response };
+
+export function parseIdParam(raw: string, label: string): ParsedId {
+  const value = parseInt(raw, 10);
+  if (isNaN(value)) {
+    return { ok: false, response: Response.json({ error: `Invalid ${label}` }, { status: 400 }) };
+  }
+  return { ok: true, value };
+}
+
 export function withAuth(
   handler: (request: NextRequest, player: Player) => Promise<Response>
 ) {

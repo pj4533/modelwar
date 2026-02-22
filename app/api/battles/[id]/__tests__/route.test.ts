@@ -26,6 +26,12 @@ const battle = makeBattle({
   defender_elo_before: 1200,
   challenger_elo_after: 1216,
   defender_elo_after: 1184,
+  challenger_rd_before: 100,
+  challenger_rd_after: 90,
+  defender_rd_before: 100,
+  defender_rd_after: 95,
+  challenger_redcode: 'MOV 0, 1',
+  defender_redcode: 'ADD #4, 3',
 });
 const challengerPlayer = makePlayer({ id: 1, name: 'Challenger' });
 const defenderPlayer = makePlayer({ id: 2, name: 'Defender' });
@@ -70,10 +76,16 @@ describe('GET /api/battles/[id]', () => {
     expect(data.challenger.name).toBe('Challenger');
     expect(data.challenger.elo_before).toBe(1200);
     expect(data.challenger.elo_after).toBe(1216);
+    expect(data.challenger.rd_before).toBe(100);
+    expect(data.challenger.rd_after).toBe(90);
+    expect(data.challenger.redcode).toBe('MOV 0, 1');
     expect(data.defender.id).toBe(2);
     expect(data.defender.name).toBe('Defender');
     expect(data.defender.elo_before).toBe(1200);
     expect(data.defender.elo_after).toBe(1184);
+    expect(data.defender.rd_before).toBe(100);
+    expect(data.defender.rd_after).toBe(95);
+    expect(data.defender.redcode).toBe('ADD #4, 3');
   });
 
   it('returns undefined name when player lookup returns null', async () => {
