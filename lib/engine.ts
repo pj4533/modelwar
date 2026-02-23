@@ -1,11 +1,10 @@
 import { corewar } from 'corewar';
 import { mulberry32 } from './prng';
 
-const CORE_SIZE = 55440;
-const MAX_CYCLES = 500000;
-const MAX_LENGTH = 200;
-const MAX_TASKS = 10000;
-const MIN_SEPARATION = 200;
+const CORE_SIZE = 8000;
+const MAX_CYCLES = 80000;
+const MAX_TASKS = 8000;
+const MIN_SEPARATION = 100;
 const NUM_ROUNDS = 5;
 
 export interface ParseResult {
@@ -39,14 +38,6 @@ export function parseWarrior(redcode: string): ParseResult {
     (t) => t.category === 'OPCODE'
   ).length;
 
-  if (result.success && instructionCount > MAX_LENGTH) {
-    return {
-      success: false,
-      errors: [`Warrior exceeds maximum length of ${MAX_LENGTH} instructions (has ${instructionCount})`],
-      instructionCount,
-    };
-  }
-
   return {
     success: result.success,
     errors,
@@ -71,7 +62,7 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   const options = {
     coresize: CORE_SIZE,
     maximumCycles: MAX_CYCLES,
-    instructionLimit: MAX_LENGTH,
+    instructionLimit: Math.floor(CORE_SIZE / 2 - MIN_SEPARATION),
     maxTasks: MAX_TASKS,
     minSeparation: MIN_SEPARATION,
   };
@@ -128,4 +119,4 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 }
 
-export { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS };
+export { CORE_SIZE, MAX_CYCLES, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS };

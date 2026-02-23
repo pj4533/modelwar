@@ -70,17 +70,6 @@ describe('parseWarrior', () => {
     ]);
   });
 
-  it('fails when instruction count exceeds MAX_LENGTH (200)', () => {
-    mockParse.mockReturnValueOnce(successParse(201));
-
-    const result = parseWarrior('LONG WARRIOR');
-
-    expect(result.success).toBe(false);
-    expect(result.errors).toEqual([
-      'Warrior exceeds maximum length of 200 instructions (has 201)',
-    ]);
-    expect(result.instructionCount).toBe(201);
-  });
 });
 
 describe('runBattle', () => {
@@ -236,11 +225,11 @@ describe('runBattle', () => {
     // Verify options include maxTasks
     const options = mockInitialiseSimulator.mock.calls[0][0];
     expect(options).toEqual({
-      coresize: 55440,
-      maximumCycles: 500000,
-      instructionLimit: 200,
-      maxTasks: 10000,
-      minSeparation: 200,
+      coresize: 8000,
+      maximumCycles: 80000,
+      instructionLimit: 3900,
+      maxTasks: 8000,
+      minSeparation: 100,
     });
   });
 

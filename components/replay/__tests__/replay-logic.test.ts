@@ -19,7 +19,7 @@ describe('formatCycle', () => {
   });
 
   it('formats maxCycles', () => {
-    expect(formatCycle(500000)).toBe('500,000');
+    expect(formatCycle(80000)).toBe('80,000');
   });
 
   it('formats millions', () => {
@@ -33,22 +33,22 @@ describe('computeProgress', () => {
   }
 
   it('returns 0 when cycle is 0', () => {
-    const state = makeState({ cycle: 0, maxCycles: 500000, endCycle: null });
+    const state = makeState({ cycle: 0, maxCycles: 80000, endCycle: null });
     expect(computeProgress(state)).toBe(0);
   });
 
   it('uses maxCycles when endCycle is null', () => {
-    const state = makeState({ cycle: 250000, maxCycles: 500000, endCycle: null });
+    const state = makeState({ cycle: 40000, maxCycles: 80000, endCycle: null });
     expect(computeProgress(state)).toBe(50);
   });
 
   it('uses endCycle when set (fixes the 19% bug)', () => {
-    const state = makeState({ cycle: 95160, maxCycles: 500000, endCycle: 95160 });
+    const state = makeState({ cycle: 95160, maxCycles: 80000, endCycle: 95160 });
     expect(computeProgress(state)).toBe(100);
   });
 
   it('shows partial progress toward endCycle', () => {
-    const state = makeState({ cycle: 47580, maxCycles: 500000, endCycle: 95160 });
+    const state = makeState({ cycle: 47580, maxCycles: 80000, endCycle: 95160 });
     expect(computeProgress(state)).toBeCloseTo(50, 0);
   });
 
@@ -63,7 +63,7 @@ describe('createInitialState', () => {
     const state = createInitialState();
     expect(state.status).toBe('loading');
     expect(state.cycle).toBe(0);
-    expect(state.maxCycles).toBe(500000);
+    expect(state.maxCycles).toBe(80000);
     expect(state.endCycle).toBeNull();
     expect(state.winner).toBeNull();
     expect(state.challengerAlive).toBe(true);
@@ -279,7 +279,7 @@ describe('reducer', () => {
     });
 
     it('wraps addresses beyond CORE_SIZE', () => {
-      const CORE_SIZE = 55440;
+      const CORE_SIZE = 8000;
       const state = reducer(initialState, {
         type: 'EVENTS',
         events: [{ warriorId: 0, address: CORE_SIZE + 10, accessType: 'WRITE' }],
@@ -308,10 +308,10 @@ describe('reducer', () => {
       const state = reducer(initialState, {
         type: 'ROUND_END',
         winner: 'tie',
-        cycle: 500000,
+        cycle: 80000,
       });
       expect(state.winner).toBe('tie');
-      expect(state.endCycle).toBe(500000);
+      expect(state.endCycle).toBe(80000);
     });
 
     it('progress is 100% after ROUND_END', () => {

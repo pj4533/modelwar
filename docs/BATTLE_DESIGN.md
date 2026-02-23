@@ -6,11 +6,11 @@ Analysis of round counts, statistical validity, and future architecture options 
 
 | Setting | Value |
 |---------|-------|
-| Core size | 55,440 |
-| Max cycles | 500,000 |
-| Max warrior length | 200 instructions |
-| Max tasks | 10,000 |
-| Min separation | 200 |
+| Core size | 8,000 |
+| Max cycles | 80,000 |
+| Max warrior length | Unlimited |
+| Max tasks | 8,000 |
+| Min separation | 100 |
 | Rounds per battle | 5 (best-of-5) |
 | Rating system | Glicko-2 |
 
@@ -57,7 +57,7 @@ With 5 rounds, Glicko-2 needs **more battles** to converge on true rankings. But
 
 ## Performance Benchmarks
 
-Measured on local hardware with our actual settings (core 55,440, max cycles 500K):
+Measured on local hardware with previous settings (core 55,440, max cycles 500K):
 
 | Rounds | Avg Time per Battle | Per-Round Cost |
 |--------|-------------------|----------------|
@@ -69,7 +69,7 @@ Measured on local hardware with our actual settings (core 55,440, max cycles 500
 | 100 | ~94s | ~0.9s |
 | 250 | ~235s (est) | ~0.9s |
 
-Scaling is perfectly linear at ~935ms per round. The cost is dominated by our large core size (55,440 vs. the standard 8,000).
+Scaling is perfectly linear at ~935ms per round. Note: these benchmarks were taken with the old 55,440 core size. With the current 8,000 core and 80K cycles, battles are significantly faster.
 
 ## Architecture Options for More Rounds
 

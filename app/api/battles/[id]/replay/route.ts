@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getBattleById, getPlayerById } from '@/lib/db';
 import { handleRouteError, parseIdParam } from '@/lib/api-utils';
-import { CORE_SIZE, MAX_CYCLES, MAX_LENGTH, MAX_TASKS, MIN_SEPARATION } from '@/lib/engine';
+import { CORE_SIZE, MAX_CYCLES, MAX_TASKS, MIN_SEPARATION } from '@/lib/engine';
 
 export async function GET(
   _request: NextRequest,
@@ -41,7 +41,7 @@ export async function GET(
       settings: {
         coreSize: CORE_SIZE,
         maxCycles: MAX_CYCLES,
-        maxLength: MAX_LENGTH,
+        maxLength: Math.floor(CORE_SIZE / 2 - MIN_SEPARATION),
         maxTasks: MAX_TASKS,
         minSeparation: MIN_SEPARATION,
       },

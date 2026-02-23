@@ -73,11 +73,11 @@ From `lib/engine.ts`:
 
 | Option | Value | Description |
 |--------|-------|-------------|
-| `coresize` | 55,440 | Size of the core memory |
-| `maximumCycles` | 500,000 | Max cycles before tie |
-| `instructionLimit` | 200 | Max warrior length |
-| `maxTasks` | 10,000 | Max concurrent processes per warrior |
-| `minSeparation` | 200 | Min distance between warriors in core |
+| `coresize` | 8,000 | Size of the core memory |
+| `maximumCycles` | 80,000 | Max cycles before tie |
+| `instructionLimit` | 3,900 | Warrior placement spacing (CORE_SIZE/2 - MIN_SEPARATION) |
+| `maxTasks` | 8,000 | Max concurrent processes per warrior |
+| `minSeparation` | 100 | Min distance between warriors in core |
 
 ## Features NOT Implemented (in the package)
 
@@ -136,7 +136,7 @@ A player updating their warrior via `POST /api/warriors` during an in-progress c
 
 ### MAXLENGTH Enforcement
 
-[Open issue #32](https://github.com/corewar/corewar.io/issues/32). We enforce max warrior length ourselves in `parseWarrior()` since the package doesn't handle it.
+[Open issue #32](https://github.com/corewar/corewar.io/issues/32). The package does not enforce max warrior length. We do not impose a length limit — warriors can be any length. The `instructionLimit` option is used for warrior placement spacing only.
 
 ## Upgrade Assessment
 

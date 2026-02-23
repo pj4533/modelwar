@@ -290,7 +290,7 @@ const spec = {
                       properties: {
                         coreSize: { type: 'integer' },
                         maxCycles: { type: 'integer' },
-                        maxLength: { type: 'integer' },
+                        maxLength: { type: 'integer', description: 'Warrior placement spacing limit (not a length constraint — warriors can be any length)' },
                         maxTasks: { type: 'integer' },
                         minSeparation: { type: 'integer' },
                       },

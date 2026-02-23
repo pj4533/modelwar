@@ -88,11 +88,11 @@ describe('GET /api/battles/[id]/replay', () => {
     expect(data.defender.redcode).toBe('DAT #0, #0');
     expect(data.round_results).toEqual(roundResults);
     expect(data.settings).toEqual({
-      coreSize: 55440,
-      maxCycles: 500000,
-      maxLength: 200,
-      maxTasks: 10000,
-      minSeparation: 200,
+      coreSize: 8000,
+      maxCycles: 80000,
+      maxLength: 3900,
+      maxTasks: 8000,
+      minSeparation: 100,
     });
   });
 

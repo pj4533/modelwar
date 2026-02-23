@@ -2,9 +2,9 @@
 
 import { useRef, useEffect } from 'react';
 
-const COLS = 280;
-const ROWS = 198;
-const CELL_SIZE = 2;
+const COLS = 100;
+const ROWS = 80;
+const CELL_SIZE = 4;
 const WIDTH = COLS * CELL_SIZE;
 const HEIGHT = ROWS * CELL_SIZE;
 

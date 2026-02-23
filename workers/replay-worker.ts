@@ -13,7 +13,7 @@ let defenderTasks = 0;
 let roundEnded = false;
 let roundWinner: string | null = null;
 let currentCycle = 0;
-let maxCycles = 500000;
+let maxCycles = 80000;
 let prescanMode = false;
 // Maps worker-internal warrior indices to logical roles
 let warriorIndexToRole: ('challenger' | 'defender')[];
