@@ -6,7 +6,7 @@ import {
   updatePlayerRating,
   withTransaction,
 } from '@/lib/db';
-import { runBattle } from '@/lib/engine';
+import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
 import { conservativeRating } from '@/lib/player-utils';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
@@ -58,6 +58,22 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
     if (!defenderWarrior) {
       return Response.json(
         { error: 'Defender has no warrior uploaded' },
+        { status: 400 }
+      );
+    }
+
+    // Validate warriors are within size limits (defense-in-depth)
+    const challengerParse = parseWarrior(challengerWarrior.redcode);
+    if (!challengerParse.success) {
+      return Response.json(
+        { error: 'Your warrior is invalid or exceeds the maximum length. Please re-upload.' },
+        { status: 400 }
+      );
+    }
+    const defenderParse = parseWarrior(defenderWarrior.redcode);
+    if (!defenderParse.success) {
+      return Response.json(
+        { error: 'Defender warrior is invalid or exceeds the maximum length' },
         { status: 400 }
       );
     }

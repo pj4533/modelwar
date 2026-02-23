@@ -15,7 +15,7 @@ import {
   updatePlayerRating,
   withTransaction,
 } from '@/lib/db';
-import { runBattle } from '@/lib/engine';
+import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/glicko';
 
 const mockAuth = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>;
@@ -26,6 +26,7 @@ const mockCreateBattle = createBattle as jest.MockedFunction<typeof createBattle
 const mockUpdatePlayerRating = updatePlayerRating as jest.MockedFunction<typeof updatePlayerRating>;
 const mockWithTransaction = withTransaction as jest.MockedFunction<typeof withTransaction>;
 const mockRunBattle = runBattle as jest.MockedFunction<typeof runBattle>;
+const mockParseWarrior = parseWarrior as jest.MockedFunction<typeof parseWarrior>;
 const mockCalcRatings = calculateNewRatings as jest.MockedFunction<typeof calculateNewRatings>;
 
 function createRequest(url: string, options?: { method?: string; body?: unknown; headers?: Record<string, string> }) {
@@ -57,6 +58,7 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
   mockGetWarriorByPlayerId
     .mockResolvedValueOnce(challengerWarrior)
     .mockResolvedValueOnce(defenderWarrior);
+  mockParseWarrior.mockReturnValue({ success: true, errors: [], instructionCount: 5 });
   mockRunBattle.mockReturnValue({
     rounds: [{ round: 1, winner: 'challenger', seed: 12345 }],
     challengerWins: cWins,
@@ -238,5 +240,43 @@ describe('POST /api/challenge', () => {
     );
     expect(mockUpdatePlayerRating).toHaveBeenCalledWith(challenger.id, 1216, 320, 0.06, 'tie', expect.anything());
     expect(mockUpdatePlayerRating).toHaveBeenCalledWith(defender.id, 1184, 320, 0.06, 'tie', expect.anything());
+  });
+
+  it('returns 400 when challenger warrior fails validation', async () => {
+    mockAuth.mockResolvedValue(challenger);
+    mockGetPlayerById.mockResolvedValue(defender);
+    mockGetWarriorByPlayerId
+      .mockResolvedValueOnce(challengerWarrior)
+      .mockResolvedValueOnce(defenderWarrior);
+    mockParseWarrior.mockReturnValueOnce({ success: false, errors: ['Too long'], instructionCount: 4000 });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/Your warrior is invalid or exceeds the maximum length/);
+    expect(mockRunBattle).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when defender warrior fails validation', async () => {
+    mockAuth.mockResolvedValue(challenger);
+    mockGetPlayerById.mockResolvedValue(defender);
+    mockGetWarriorByPlayerId
+      .mockResolvedValueOnce(challengerWarrior)
+      .mockResolvedValueOnce(defenderWarrior);
+    mockParseWarrior
+      .mockReturnValueOnce({ success: true, errors: [], instructionCount: 5 })
+      .mockReturnValueOnce({ success: false, errors: ['Too long'], instructionCount: 4000 });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/Defender warrior is invalid or exceeds the maximum length/);
+    expect(mockRunBattle).not.toHaveBeenCalled();
   });
 });
