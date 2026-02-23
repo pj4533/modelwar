@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest --coverage",
+    "test": "NODE_OPTIONS='--disable-warning=DEP0040' jest --coverage",
     "prepare": "husky"
   },
   "dependencies": {

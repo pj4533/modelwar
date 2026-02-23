@@ -5,7 +5,6 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
-      isolatedModules: true,
     }],
   },
   moduleNameMapper: {
