@@ -136,7 +136,9 @@ A player updating their warrior via `POST /api/warriors` during an in-progress c
 
 ### MAXLENGTH Enforcement
 
-[Open issue #32](https://github.com/corewar/corewar.io/issues/32). The package does not enforce max warrior length. We do not impose a length limit — warriors can be any length. The `instructionLimit` option is used for warrior placement spacing only.
+[Open issue #32](https://github.com/corewar/corewar.io/issues/32). The corewar npm package does not enforce max warrior length during loading — the `WarriorLoader` writes all parsed instructions to core regardless of `instructionLimit`. This means warriors exceeding the limit silently overflow their allocated space, potentially overwriting the opponent's code.
+
+**We enforce the limit ourselves** in `parseWarrior()` (`lib/engine.ts`). Warriors exceeding `MAX_WARRIOR_LENGTH` (CORESIZE/2 − MINSEPARATION = 3,900) are rejected at upload time with an error. The `instructionLimit` simulator option controls warrior placement spacing, and warriors must fit within it to avoid core overlap.
 
 ## Upgrade Assessment
 

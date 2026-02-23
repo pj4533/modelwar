@@ -6,6 +6,7 @@ const MAX_CYCLES = 80000;
 const MAX_TASKS = 8000;
 const MIN_SEPARATION = 100;
 const NUM_ROUNDS = 5;
+const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
 
 export interface ParseResult {
   success: boolean;
@@ -37,6 +38,14 @@ export function parseWarrior(redcode: string): ParseResult {
   const instructionCount = result.tokens.filter(
     (t) => t.category === 'OPCODE'
   ).length;
+
+  if (result.success && instructionCount > MAX_WARRIOR_LENGTH) {
+    return {
+      success: false,
+      errors: [`Warrior has ${instructionCount} instructions but the maximum is ${MAX_WARRIOR_LENGTH} (CORESIZE/2 - MINSEPARATION)`],
+      instructionCount,
+    };
+  }
 
   return {
     success: result.success,
@@ -119,4 +128,4 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 }
 
-export { CORE_SIZE, MAX_CYCLES, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS };
+export { CORE_SIZE, MAX_CYCLES, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS, MAX_WARRIOR_LENGTH };

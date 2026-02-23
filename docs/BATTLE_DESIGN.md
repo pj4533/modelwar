@@ -8,7 +8,7 @@ Analysis of round counts, statistical validity, and future architecture options 
 |---------|-------|
 | Core size | 8,000 |
 | Max cycles | 80,000 |
-| Max warrior length | Unlimited |
+| Max warrior length | 3,900 (CORESIZE/2 − MINSEPARATION) |
 | Max tasks | 8,000 |
 | Min separation | 100 |
 | Rounds per battle | 5 (best-of-5) |

@@ -53,6 +53,28 @@ describe('parseWarrior', () => {
     expect(mockParse).toHaveBeenCalledWith('MOV 0, 1');
   });
 
+  it('rejects warriors exceeding MAX_WARRIOR_LENGTH (3900)', () => {
+    mockParse.mockReturnValueOnce(successParse(3901));
+
+    const result = parseWarrior('HUGE WARRIOR');
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual([
+      'Warrior has 3901 instructions but the maximum is 3900 (CORESIZE/2 - MINSEPARATION)',
+    ]);
+    expect(result.instructionCount).toBe(3901);
+  });
+
+  it('accepts warriors at exactly MAX_WARRIOR_LENGTH (3900)', () => {
+    mockParse.mockReturnValueOnce(successParse(3900));
+
+    const result = parseWarrior('BIG WARRIOR');
+
+    expect(result.success).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.instructionCount).toBe(3900);
+  });
+
   it('returns failure with formatted error messages', () => {
     mockParse.mockReturnValueOnce(
       failParse([
