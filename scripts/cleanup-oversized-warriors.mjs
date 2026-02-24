@@ -5,7 +5,7 @@
 
 import pg from 'pg';
 import { config } from 'dotenv';
-import { corewar } from 'corewar';
+import { corewar } from 'pmars-ts';
 
 config({ path: '.env.local' });
 

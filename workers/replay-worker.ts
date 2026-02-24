@@ -1,5 +1,4 @@
-import { corewar } from 'corewar';
-import { mulberry32 } from '../lib/prng';
+import { corewar } from 'pmars-ts';
 
 interface CoreEvent {
   warriorId: number;
@@ -19,7 +18,6 @@ let prescanMode = false;
 let warriorIndexToRole: ('challenger' | 'defender')[];
 
 // Stored init params for re-initialization after prescan
-let storedSeed: number = 0;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let storedWarriors: any[] = [];
 let storedSettings: {
@@ -28,6 +26,7 @@ let storedSettings: {
   instructionLimit: number;
   maxTasks: number;
   minSeparation: number;
+  seed: number;
 } | null = null;
 
 const messageProvider = {
@@ -96,39 +95,26 @@ self.onmessage = (e: MessageEvent) => {
 
       const swapped = roundIndex % 2 !== 0;
       const warriors = swapped
-        ? [{ source: defenderParsed }, { source: challengerParsed }]
-        : [{ source: challengerParsed }, { source: defenderParsed }];
+        ? [{ source: defenderParsed, data: defenderRedcode }, { source: challengerParsed, data: challengerRedcode }]
+        : [{ source: challengerParsed, data: challengerRedcode }, { source: defenderParsed, data: defenderRedcode }];
 
       warriorIndexToRole = swapped
         ? ['defender', 'challenger']
         : ['challenger', 'defender'];
 
-      const originalRandom = Math.random;
-      Math.random = mulberry32(seed);
-
-      corewar.initialiseSimulator(
-        {
-          coresize: settings.coreSize,
-          maximumCycles: settings.maxCycles,
-          instructionLimit: settings.maxLength,
-          maxTasks: settings.maxTasks,
-          minSeparation: settings.minSeparation,
-        },
-        warriors,
-        messageProvider
-      );
-
-      Math.random = originalRandom;
-
-      storedSeed = seed;
-      storedWarriors = warriors;
-      storedSettings = {
+      const simSettings = {
         coresize: settings.coreSize,
         maximumCycles: settings.maxCycles,
         instructionLimit: settings.maxLength,
         maxTasks: settings.maxTasks,
         minSeparation: settings.minSeparation,
+        seed,
       };
+
+      corewar.initialiseSimulator(simSettings, warriors, messageProvider);
+
+      storedWarriors = warriors;
+      storedSettings = simSettings;
 
       pendingEvents = [];
       challengerTasks = 0;
@@ -194,10 +180,7 @@ self.onmessage = (e: MessageEvent) => {
     const endCycle = currentCycle;
 
     // Re-initialize simulator with same params for actual replay
-    const originalRandom = Math.random;
-    Math.random = mulberry32(storedSeed);
     corewar.initialiseSimulator(storedSettings!, storedWarriors, messageProvider);
-    Math.random = originalRandom;
 
     // Reset all state
     prescanMode = false;
