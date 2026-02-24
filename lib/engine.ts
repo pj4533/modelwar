@@ -1,5 +1,4 @@
-import { corewar } from 'corewar';
-import { mulberry32 } from './prng';
+import { corewar } from 'pmars-ts';
 
 const CORE_SIZE = 8000;
 const MAX_CYCLES = 80000;
@@ -68,32 +67,26 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   let dWins = 0;
   let tieCount = 0;
 
-  const options = {
-    coresize: CORE_SIZE,
-    maximumCycles: MAX_CYCLES,
-    instructionLimit: Math.floor(CORE_SIZE / 2 - MIN_SEPARATION),
-    maxTasks: MAX_TASKS,
-    minSeparation: MIN_SEPARATION,
-  };
-
   for (let i = 0; i < NUM_ROUNDS; i++) {
     const seed = Math.floor(Math.random() * 2147483647);
-    const originalRandom = Math.random;
-    Math.random = mulberry32(seed);
+
+    const options = {
+      coresize: CORE_SIZE,
+      maximumCycles: MAX_CYCLES,
+      instructionLimit: Math.floor(CORE_SIZE / 2 - MIN_SEPARATION),
+      maxTasks: MAX_TASKS,
+      minSeparation: MIN_SEPARATION,
+      seed,
+    };
 
     // Alternate starting positions by swapping warrior order each round
     const swapped = i % 2 !== 0;
     const warriors = swapped
-      ? [{ source: defenderParsed }, { source: challengerParsed }]
-      : [{ source: challengerParsed }, { source: defenderParsed }];
+      ? [{ source: defenderParsed, data: defenderRedcode }, { source: challengerParsed, data: challengerRedcode }]
+      : [{ source: challengerParsed, data: challengerRedcode }, { source: defenderParsed, data: defenderRedcode }];
 
-    // Use initialiseSimulator + run instead of runMatch so that
-    // Executive.maxTasks is properly set (the corewar library's runMatch
-    // never calls Executive.initialise, leaving maxTasks undefined and
-    // making all SPL instructions no-ops).
     corewar.initialiseSimulator(options, warriors);
     const roundResult = corewar.run() as { winnerId: number | null; outcome: string } | null;
-    Math.random = originalRandom;
 
     let winner: 'challenger' | 'defender' | 'tie';
     if (roundResult && roundResult.outcome === 'WIN' && roundResult.winnerId !== null) {

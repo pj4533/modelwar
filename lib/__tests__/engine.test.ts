@@ -1,22 +1,16 @@
-jest.mock('corewar');
-jest.mock('../prng');
+jest.mock('pmars-ts');
 
-import { corewar } from 'corewar';
+import { corewar } from 'pmars-ts';
 import { parseWarrior, runBattle } from '../engine';
-import { mulberry32 } from '../prng';
 
 const mockParse = corewar.parse as jest.Mock;
 const mockInitialiseSimulator = corewar.initialiseSimulator as jest.Mock;
 const mockRun = corewar.run as jest.Mock;
-const mockMulberry32 = mulberry32 as jest.MockedFunction<typeof mulberry32>;
 
 beforeEach(() => {
   mockParse.mockReset();
   mockInitialiseSimulator.mockReset();
   mockRun.mockReset();
-  mockMulberry32.mockReset();
-  // Default: return a function that behaves like Math.random
-  mockMulberry32.mockReturnValue(() => 0.5);
 });
 
 function successParse(instructionCount = 5) {
@@ -191,19 +185,6 @@ describe('runBattle', () => {
     }
   });
 
-  it('uses mulberry32 seeded PRNG for each round', () => {
-    setupValidParse();
-
-    for (let i = 0; i < 5; i++) {
-      mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
-    }
-
-    runBattle('CHALLENGER', 'DEFENDER');
-
-    // mulberry32 should be called once per round (5 rounds)
-    expect(mockMulberry32).toHaveBeenCalledTimes(5);
-  });
-
   it('alternates warrior positions: even rounds not swapped, odd rounds swapped', () => {
     setupValidParse();
 
@@ -244,7 +225,7 @@ describe('runBattle', () => {
 
     runBattle('CHALLENGER', 'DEFENDER');
 
-    // Verify options include maxTasks
+    // Verify options include maxTasks and seed
     const options = mockInitialiseSimulator.mock.calls[0][0];
     expect(options).toEqual({
       coresize: 8000,
@@ -252,6 +233,7 @@ describe('runBattle', () => {
       instructionLimit: 3900,
       maxTasks: 8000,
       minSeparation: 100,
+      seed: expect.any(Number),
     });
   });
 
