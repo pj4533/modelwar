@@ -85,18 +85,16 @@ self.onmessage = (e: MessageEvent) => {
       const { challengerRedcode, defenderRedcode, seed, settings, roundIndex } = msg;
       maxCycles = settings.maxCycles;
 
-      const challengerParsed = corewar.parse(challengerRedcode);
-      const defenderParsed = corewar.parse(defenderRedcode);
-
-      if (!challengerParsed.success || !defenderParsed.success) {
-        self.postMessage({ type: 'error', message: 'Failed to parse warrior Redcode' });
-        return;
-      }
-
       const swapped = roundIndex % 2 !== 0;
+
+      // Skip corewar.parse() — the default assembler has maxLength=100 which
+      // rejects warriors with FOR/ROF macros that expand beyond 100 instructions.
+      // Instead, pass placeholder parse results with raw redcode as data.
+      // initialiseSimulator() re-assembles from data strings with correct options.
+      const placeholder = { success: true, metaData: { name: '', author: '', strategy: '' }, tokens: [], messages: [] };
       const warriors = swapped
-        ? [{ source: defenderParsed, data: defenderRedcode }, { source: challengerParsed, data: challengerRedcode }]
-        : [{ source: challengerParsed, data: challengerRedcode }, { source: defenderParsed, data: defenderRedcode }];
+        ? [{ source: placeholder, data: defenderRedcode }, { source: placeholder, data: challengerRedcode }]
+        : [{ source: placeholder, data: challengerRedcode }, { source: placeholder, data: defenderRedcode }];
 
       warriorIndexToRole = swapped
         ? ['defender', 'challenger']

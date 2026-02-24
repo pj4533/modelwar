@@ -1,4 +1,4 @@
-import { corewar } from 'pmars-ts';
+import { corewar, Assembler } from 'pmars-ts';
 
 const CORE_SIZE = 8000;
 const MAX_CYCLES = 80000;
@@ -27,24 +27,24 @@ export interface BattleResult {
   overallResult: 'challenger_win' | 'defender_win' | 'tie';
 }
 
+// Assembler configured with correct options so warriors with FOR/ROF macros
+// that expand beyond the default maxLength=100 are handled correctly.
+const assembler = new Assembler({
+  coreSize: CORE_SIZE,
+  maxCycles: MAX_CYCLES,
+  maxLength: MAX_WARRIOR_LENGTH,
+  maxProcesses: MAX_TASKS,
+  minSeparation: MIN_SEPARATION,
+});
+
 export function parseWarrior(redcode: string): ParseResult {
-  const result = corewar.parse(redcode);
+  const result = assembler.assemble(redcode);
 
   const errors = result.messages
     .filter((m) => m.type === 'ERROR')
-    .map((m) => `Line ${m.position.line}: ${m.text}`);
+    .map((m) => `Line ${m.line}: ${m.text}`);
 
-  const instructionCount = result.tokens.filter(
-    (t) => t.category === 'OPCODE'
-  ).length;
-
-  if (result.success && instructionCount > MAX_WARRIOR_LENGTH) {
-    return {
-      success: false,
-      errors: [`Warrior has ${instructionCount} instructions but the maximum is ${MAX_WARRIOR_LENGTH} (CORESIZE/2 - MINSEPARATION)`],
-      instructionCount,
-    };
-  }
+  const instructionCount = result.warrior?.instructions.length ?? 0;
 
   return {
     success: result.success,
@@ -54,10 +54,11 @@ export function parseWarrior(redcode: string): ParseResult {
 }
 
 export function runBattle(challengerRedcode: string, defenderRedcode: string): BattleResult {
-  const challengerParsed = corewar.parse(challengerRedcode);
-  const defenderParsed = corewar.parse(defenderRedcode);
+  // Validate warriors using properly-configured assembler
+  const challengerResult = assembler.assemble(challengerRedcode);
+  const defenderResult = assembler.assemble(defenderRedcode);
 
-  if (!challengerParsed.success || !defenderParsed.success) {
+  if (!challengerResult.success || !defenderResult.success) {
     throw new Error('Cannot battle with invalid warriors');
   }
 
@@ -66,6 +67,9 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   let cWins = 0;
   let dWins = 0;
   let tieCount = 0;
+
+  // Placeholder parse result — initialiseSimulator() re-assembles from data strings
+  const placeholder = { success: true, metaData: { name: '', author: '', strategy: '' }, tokens: [], messages: [] };
 
   for (let i = 0; i < NUM_ROUNDS; i++) {
     const seed = Math.floor(Math.random() * 2147483647);
@@ -82,8 +86,8 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
     // Alternate starting positions by swapping warrior order each round
     const swapped = i % 2 !== 0;
     const warriors = swapped
-      ? [{ source: defenderParsed, data: defenderRedcode }, { source: challengerParsed, data: challengerRedcode }]
-      : [{ source: challengerParsed, data: challengerRedcode }, { source: defenderParsed, data: defenderRedcode }];
+      ? [{ source: placeholder, data: defenderRedcode }, { source: placeholder, data: challengerRedcode }]
+      : [{ source: placeholder, data: challengerRedcode }, { source: placeholder, data: defenderRedcode }];
 
     corewar.initialiseSimulator(options, warriors);
     const roundResult = corewar.run() as { winnerId: number | null; outcome: string } | null;

@@ -1,41 +1,49 @@
 jest.mock('pmars-ts');
 
-import { corewar } from 'pmars-ts';
+import { corewar, Assembler } from 'pmars-ts';
 import { parseWarrior, runBattle } from '../engine';
 
-const mockParse = corewar.parse as jest.Mock;
+const MockAssembler = Assembler as jest.MockedClass<typeof Assembler>;
+const mockAssemble = MockAssembler.prototype.assemble as jest.Mock;
 const mockInitialiseSimulator = corewar.initialiseSimulator as jest.Mock;
 const mockRun = corewar.run as jest.Mock;
 
 beforeEach(() => {
-  mockParse.mockReset();
+  mockAssemble.mockReset();
   mockInitialiseSimulator.mockReset();
   mockRun.mockReset();
 });
 
-function successParse(instructionCount = 5) {
+function successAssemble(instructionCount = 5) {
   return {
     success: true,
     messages: [],
-    tokens: Array.from({ length: instructionCount }, () => ({ category: 'OPCODE' })),
+    warrior: {
+      instructions: Array.from({ length: instructionCount }, () => ({})),
+      startOffset: 0,
+      name: 'Test',
+      author: 'Test',
+      strategy: '',
+      pin: null,
+    },
   };
 }
 
-function failParse(errors: Array<{ line: number; text: string }> = []) {
+function failAssemble(errors: Array<{ line: number; text: string }> = []) {
   return {
     success: false,
     messages: errors.map((e) => ({
       type: 'ERROR',
-      position: { line: e.line },
+      line: e.line,
       text: e.text,
     })),
-    tokens: [],
+    warrior: null,
   };
 }
 
 describe('parseWarrior', () => {
   it('returns success with instruction count for valid redcode', () => {
-    mockParse.mockReturnValueOnce(successParse(10));
+    mockAssemble.mockReturnValueOnce(successAssemble(10));
 
     const result = parseWarrior('MOV 0, 1');
 
@@ -44,23 +52,24 @@ describe('parseWarrior', () => {
       errors: [],
       instructionCount: 10,
     });
-    expect(mockParse).toHaveBeenCalledWith('MOV 0, 1');
+    expect(mockAssemble).toHaveBeenCalledWith('MOV 0, 1');
   });
 
-  it('rejects warriors exceeding MAX_WARRIOR_LENGTH (3900)', () => {
-    mockParse.mockReturnValueOnce(successParse(3901));
+  it('returns failure for warriors that fail assembly', () => {
+    mockAssemble.mockReturnValueOnce({
+      success: false,
+      messages: [{ type: 'ERROR', line: 0, text: 'Warrior has 3901 instructions, limit is 3900' }],
+      warrior: null,
+    });
 
     const result = parseWarrior('HUGE WARRIOR');
 
     expect(result.success).toBe(false);
-    expect(result.errors).toEqual([
-      'Warrior has 3901 instructions but the maximum is 3900 (CORESIZE/2 - MINSEPARATION)',
-    ]);
-    expect(result.instructionCount).toBe(3901);
+    expect(result.instructionCount).toBe(0);
   });
 
   it('accepts warriors at exactly MAX_WARRIOR_LENGTH (3900)', () => {
-    mockParse.mockReturnValueOnce(successParse(3900));
+    mockAssemble.mockReturnValueOnce(successAssemble(3900));
 
     const result = parseWarrior('BIG WARRIOR');
 
@@ -70,8 +79,8 @@ describe('parseWarrior', () => {
   });
 
   it('returns failure with formatted error messages', () => {
-    mockParse.mockReturnValueOnce(
-      failParse([
+    mockAssemble.mockReturnValueOnce(
+      failAssemble([
         { line: 3, text: 'Unknown opcode' },
         { line: 7, text: 'Missing operand' },
       ])
@@ -89,14 +98,14 @@ describe('parseWarrior', () => {
 });
 
 describe('runBattle', () => {
-  function setupValidParse() {
-    // runBattle parses both warriors, so we need two successful parses
-    mockParse.mockReturnValueOnce(successParse(5));
-    mockParse.mockReturnValueOnce(successParse(5));
+  function setupValidAssemble() {
+    // runBattle assembles both warriors, so we need two successful results
+    mockAssemble.mockReturnValueOnce(successAssemble(5));
+    mockAssemble.mockReturnValueOnce(successAssemble(5));
   }
 
   it('returns challenger_win when challenger wins majority of rounds', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     // 5 rounds: challenger wins 3, defender wins 1, tie 1
     // Round 1 (i=0, not swapped): winnerId 0 → challenger
@@ -121,7 +130,7 @@ describe('runBattle', () => {
   });
 
   it('returns defender_win when defender wins majority of rounds', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     // 5 rounds: winnerId 1 wins all
     // Even rounds (0,2,4): winnerId 1 = defender
@@ -139,7 +148,7 @@ describe('runBattle', () => {
   });
 
   it('returns tie when wins are equal', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     // 5 rounds: all ties (DRAW)
     for (let i = 0; i < 5; i++) {
@@ -155,21 +164,21 @@ describe('runBattle', () => {
   });
 
   it('throws Error when challenger warrior is invalid', () => {
-    mockParse.mockReturnValueOnce(failParse([{ line: 1, text: 'bad' }]));
-    mockParse.mockReturnValueOnce(successParse(5));
+    mockAssemble.mockReturnValueOnce(failAssemble([{ line: 1, text: 'bad' }]));
+    mockAssemble.mockReturnValueOnce(successAssemble(5));
 
     expect(() => runBattle('INVALID', 'VALID')).toThrow('Cannot battle with invalid warriors');
   });
 
   it('throws Error when defender warrior is invalid', () => {
-    mockParse.mockReturnValueOnce(successParse(5));
-    mockParse.mockReturnValueOnce(failParse([{ line: 1, text: 'bad' }]));
+    mockAssemble.mockReturnValueOnce(successAssemble(5));
+    mockAssemble.mockReturnValueOnce(failAssemble([{ line: 1, text: 'bad' }]));
 
     expect(() => runBattle('VALID', 'INVALID')).toThrow('Cannot battle with invalid warriors');
   });
 
   it('includes a seed in each round result', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     for (let i = 0; i < 5; i++) {
       mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
@@ -186,7 +195,7 @@ describe('runBattle', () => {
   });
 
   it('alternates warrior positions: even rounds not swapped, odd rounds swapped', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     for (let i = 0; i < 5; i++) {
       mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
@@ -197,27 +206,27 @@ describe('runBattle', () => {
     // Verify initialiseSimulator was called 5 times
     expect(mockInitialiseSimulator).toHaveBeenCalledTimes(5);
 
-    // Even-indexed rounds (0, 2, 4): challenger first
+    // Even-indexed rounds (0, 2, 4): challenger first (data = 'CHALLENGER')
     const call0Warriors = mockInitialiseSimulator.mock.calls[0][1];
     const call2Warriors = mockInitialiseSimulator.mock.calls[2][1];
     const call4Warriors = mockInitialiseSimulator.mock.calls[4][1];
 
-    // Odd-indexed rounds (1, 3): defender first (swapped)
+    // Odd-indexed rounds (1, 3): defender first (data = 'DEFENDER')
     const call1Warriors = mockInitialiseSimulator.mock.calls[1][1];
     const call3Warriors = mockInitialiseSimulator.mock.calls[3][1];
 
-    // For even rounds, first warrior source should be challengerParsed
-    // For odd rounds, first warrior source should be defenderParsed
-    expect(call0Warriors[0].source).toBe(call2Warriors[0].source);
-    expect(call0Warriors[0].source).toBe(call4Warriors[0].source);
-    expect(call1Warriors[0].source).toBe(call3Warriors[0].source);
-    // Even and odd should have swapped first warriors
-    expect(call0Warriors[0].source).not.toBe(call1Warriors[0].source);
-    expect(call0Warriors[0].source).toBe(call1Warriors[1].source);
+    // Even rounds: first warrior data should be challenger redcode
+    expect(call0Warriors[0].data).toBe('CHALLENGER');
+    expect(call2Warriors[0].data).toBe('CHALLENGER');
+    expect(call4Warriors[0].data).toBe('CHALLENGER');
+
+    // Odd rounds: first warrior data should be defender redcode (swapped)
+    expect(call1Warriors[0].data).toBe('DEFENDER');
+    expect(call3Warriors[0].data).toBe('DEFENDER');
   });
 
   it('passes maxTasks in options to initialiseSimulator', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     for (let i = 0; i < 5; i++) {
       mockRun.mockReturnValueOnce({ winnerId: null, outcome: 'DRAW' });
@@ -238,7 +247,7 @@ describe('runBattle', () => {
   });
 
   it('correctly counts wins/losses/ties across all 5 rounds', () => {
-    setupValidParse();
+    setupValidAssemble();
 
     // Round 1 (i=0, not swapped): winnerId 0 → challenger wins
     mockRun.mockReturnValueOnce({ winnerId: 0, outcome: 'WIN' });
