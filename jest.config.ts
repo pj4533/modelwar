@@ -9,7 +9,6 @@ const config: Config.InitialOptions = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^pmars-ts$': '<rootDir>/__mocks__/pmars-ts.ts',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
