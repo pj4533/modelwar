@@ -1,4 +1,5 @@
-import { corewar } from 'pmars-ts';
+import { Simulator, Assembler } from 'pmars-ts';
+import type { SimulatorEventListener, CoreAccessEvent, RoundResult } from 'pmars-ts';
 
 interface CoreEvent {
   warriorId: number;
@@ -14,65 +15,93 @@ let roundWinner: string | null = null;
 let currentCycle = 0;
 let maxCycles = 80000;
 let prescanMode = false;
-// Maps worker-internal warrior indices to logical roles
-let warriorIndexToRole: ('challenger' | 'defender')[];
 
 // Stored init params for re-initialization after prescan
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let storedWarriors: any[] = [];
 let storedSettings: {
-  coresize: number;
-  maximumCycles: number;
-  instructionLimit: number;
-  maxTasks: number;
+  coreSize: number;
+  maxCycles: number;
+  maxLength: number;
+  maxProcesses: number;
   minSeparation: number;
   seed: number;
 } | null = null;
+let storedChallengerRedcode = '';
+let storedDefenderRedcode = '';
+let storedRoundIndex = 0;
 
-const messageProvider = {
-  publishSync(topic: string, payload: unknown) {
-    if (prescanMode && topic !== 'ROUND_END') return;
-    if (topic === 'CORE_ACCESS') {
-      // PerKeyStrategy delivers an array of event objects
-      const items = payload as Array<Record<string, unknown>>;
-      for (const item of items) {
-        const internalId = item.warriorId as number;
-        pendingEvents.push({
-          warriorId: warriorIndexToRole[internalId] === 'challenger' ? 0 : 1,
-          address: item.address as number,
-          accessType: item.accessType as 'READ' | 'WRITE' | 'EXECUTE',
-        });
-      }
-    } else if (topic === 'TASK_COUNT') {
-      // PerKeyStrategy delivers an array of task count objects
-      const items = payload as Array<Record<string, unknown>>;
-      for (const item of items) {
-        const internalId = item.warriorId as number;
-        const role = warriorIndexToRole[internalId];
-        if (role === 'challenger') {
-          challengerTasks = item.taskCount as number;
-        } else {
-          defenderTasks = item.taskCount as number;
-        }
-      }
-    } else if (topic === 'ROUND_END') {
-      // LatestOnlyStrategy delivers a single object
-      const data = payload as Record<string, unknown>;
-      roundEnded = true;
-      const winnerId = data.winnerId as number | undefined;
-      if (winnerId !== undefined && winnerId !== null) {
-        roundWinner = warriorIndexToRole[winnerId];
+let simulator: Simulator | null = null;
+
+const eventListener: SimulatorEventListener = {
+  onCoreAccess(events: CoreAccessEvent[]) {
+    if (prescanMode) return;
+    for (const item of events) {
+      pendingEvents.push({
+        // challenger is always warrior 0, defender is always warrior 1
+        warriorId: item.warriorId,
+        address: item.address,
+        accessType: item.accessType,
+      });
+    }
+  },
+  onTaskCount(counts) {
+    if (prescanMode) return;
+    for (const item of counts) {
+      if (item.warriorId === 0) {
+        challengerTasks = item.taskCount;
       } else {
-        roundWinner = 'tie';
+        defenderTasks = item.taskCount;
       }
+    }
+  },
+  onRoundEnd(event) {
+    roundEnded = true;
+    if (event.winnerId !== null) {
+      roundWinner = event.winnerId === 0 ? 'challenger' : 'defender';
+    } else {
+      roundWinner = 'tie';
     }
   },
 };
 
+function createSimulatorWithWarriors(settings: typeof storedSettings, challengerRedcode: string, defenderRedcode: string): Simulator {
+  const assembler = new Assembler({
+    coreSize: settings!.coreSize,
+    maxCycles: settings!.maxCycles,
+    maxLength: settings!.maxLength,
+    maxProcesses: settings!.maxProcesses,
+    minSeparation: settings!.minSeparation,
+  });
+
+  const challengerResult = assembler.assemble(challengerRedcode);
+  const defenderResult = assembler.assemble(defenderRedcode);
+
+  if (!challengerResult.success || !defenderResult.success) {
+    throw new Error('Failed to assemble warriors');
+  }
+
+  const sim = new Simulator({
+    coreSize: settings!.coreSize,
+    maxCycles: settings!.maxCycles,
+    maxLength: settings!.maxLength,
+    maxProcesses: settings!.maxProcesses,
+    minSeparation: settings!.minSeparation,
+    seed: settings!.seed,
+  });
+
+  sim.loadWarriors([challengerResult.warrior!, defenderResult.warrior!]);
+  return sim;
+}
+
+function fastForwardRounds(sim: Simulator, numRounds: number): void {
+  for (let i = 0; i < numRounds; i++) {
+    sim.runRound();
+  }
+}
+
 function runToCompletion() {
   const remaining = maxCycles - currentCycle;
   for (let i = 0; i < remaining && !roundEnded; i++) {
-    corewar.step();
+    simulator!.step();
     currentCycle++;
   }
 }
@@ -85,34 +114,29 @@ self.onmessage = (e: MessageEvent) => {
       const { challengerRedcode, defenderRedcode, seed, settings, roundIndex } = msg;
       maxCycles = settings.maxCycles;
 
-      const swapped = roundIndex % 2 !== 0;
-
-      // Skip corewar.parse() — the default assembler has maxLength=100 which
-      // rejects warriors with FOR/ROF macros that expand beyond 100 instructions.
-      // Instead, pass placeholder parse results with raw redcode as data.
-      // initialiseSimulator() re-assembles from data strings with correct options.
-      const placeholder = { success: true, metaData: { name: '', author: '', strategy: '' }, tokens: [], messages: [] };
-      const warriors = swapped
-        ? [{ source: placeholder, data: defenderRedcode }, { source: placeholder, data: challengerRedcode }]
-        : [{ source: placeholder, data: challengerRedcode }, { source: placeholder, data: defenderRedcode }];
-
-      warriorIndexToRole = swapped
-        ? ['defender', 'challenger']
-        : ['challenger', 'defender'];
-
-      const simSettings = {
-        coresize: settings.coreSize,
-        maximumCycles: settings.maxCycles,
-        instructionLimit: settings.maxLength,
-        maxTasks: settings.maxTasks,
+      storedSettings = {
+        coreSize: settings.coreSize,
+        maxCycles: settings.maxCycles,
+        maxLength: settings.maxLength,
+        maxProcesses: settings.maxTasks,
         minSeparation: settings.minSeparation,
         seed,
       };
+      storedChallengerRedcode = challengerRedcode;
+      storedDefenderRedcode = defenderRedcode;
+      storedRoundIndex = roundIndex;
 
-      corewar.initialiseSimulator(simSettings, warriors, messageProvider);
+      // Create simulator and load warriors
+      simulator = createSimulatorWithWarriors(storedSettings, challengerRedcode, defenderRedcode);
 
-      storedWarriors = warriors;
-      storedSettings = simSettings;
+      // Fast-forward prior rounds to build up correct pspace state
+      if (roundIndex > 0) {
+        fastForwardRounds(simulator, roundIndex);
+      }
+
+      // Set event listener for the target round
+      simulator.setEventListener(eventListener);
+      simulator.setupRound();
 
       pendingEvents = [];
       challengerTasks = 0;
@@ -130,7 +154,7 @@ self.onmessage = (e: MessageEvent) => {
     pendingEvents = [];
 
     for (let i = 0; i < count && !roundEnded; i++) {
-      corewar.step();
+      simulator!.step();
       currentCycle++;
     }
 
@@ -177,8 +201,17 @@ self.onmessage = (e: MessageEvent) => {
 
     const endCycle = currentCycle;
 
-    // Re-initialize simulator with same params for actual replay
-    corewar.initialiseSimulator(storedSettings!, storedWarriors, messageProvider);
+    // Re-create simulator with same params for actual replay
+    simulator = createSimulatorWithWarriors(storedSettings, storedChallengerRedcode, storedDefenderRedcode);
+
+    // Fast-forward prior rounds again for correct pspace
+    if (storedRoundIndex > 0) {
+      fastForwardRounds(simulator, storedRoundIndex);
+    }
+
+    // Set event listener and set up the target round
+    simulator.setEventListener(eventListener);
+    simulator.setupRound();
 
     // Reset all state
     prescanMode = false;

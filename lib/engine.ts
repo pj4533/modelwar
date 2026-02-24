@@ -1,4 +1,5 @@
-import { corewar, Assembler } from 'pmars-ts';
+import { Simulator, Assembler } from 'pmars-ts';
+import type { RoundResult as SimRoundResult } from 'pmars-ts';
 
 const CORE_SIZE = 8000;
 const MAX_CYCLES = 80000;
@@ -62,40 +63,39 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
     throw new Error('Cannot battle with invalid warriors');
   }
 
-  // Run individual rounds with alternating positions for fairness
+  // Single seed per battle
+  const seed = Math.floor(Math.random() * 2147483647);
+
+  // Create simulator with direct API options
+  const sim = new Simulator({
+    coreSize: CORE_SIZE,
+    maxCycles: MAX_CYCLES,
+    maxProcesses: MAX_TASKS,
+    maxLength: MAX_WARRIOR_LENGTH,
+    minSeparation: MIN_SEPARATION,
+    seed,
+  });
+
+  // Load warriors: challenger at index 0, defender at index 1
+  sim.loadWarriors([challengerResult.warrior!, defenderResult.warrior!]);
+
+  // Run all rounds — Simulator handles fairness (rotates starter each round)
+  // and preserves pspace across rounds
+  const simResults: SimRoundResult[] = sim.run(NUM_ROUNDS);
+
+  // Map results to our types
   const detailedRounds: RoundResult[] = [];
   let cWins = 0;
   let dWins = 0;
   let tieCount = 0;
 
-  // Placeholder parse result — initialiseSimulator() re-assembles from data strings
-  const placeholder = { success: true, metaData: { name: '', author: '', strategy: '' }, tokens: [], messages: [] };
-
-  for (let i = 0; i < NUM_ROUNDS; i++) {
-    const seed = Math.floor(Math.random() * 2147483647);
-
-    const options = {
-      coresize: CORE_SIZE,
-      maximumCycles: MAX_CYCLES,
-      instructionLimit: Math.floor(CORE_SIZE / 2 - MIN_SEPARATION),
-      maxTasks: MAX_TASKS,
-      minSeparation: MIN_SEPARATION,
-      seed,
-    };
-
-    // Alternate starting positions by swapping warrior order each round
-    const swapped = i % 2 !== 0;
-    const warriors = swapped
-      ? [{ source: placeholder, data: defenderRedcode }, { source: placeholder, data: challengerRedcode }]
-      : [{ source: placeholder, data: challengerRedcode }, { source: placeholder, data: defenderRedcode }];
-
-    corewar.initialiseSimulator(options, warriors);
-    const roundResult = corewar.run() as { winnerId: number | null; outcome: string } | null;
-
+  for (let i = 0; i < simResults.length; i++) {
+    const sr = simResults[i];
     let winner: 'challenger' | 'defender' | 'tie';
-    if (roundResult && roundResult.outcome === 'WIN' && roundResult.winnerId !== null) {
-      // winnerId 0 = first warrior in array, 1 = second
-      winner = (roundResult.winnerId === 0) !== swapped ? 'challenger' : 'defender';
+
+    if (sr.outcome === 'WIN' && sr.winnerId !== null) {
+      // winnerId 0 = challenger, 1 = defender (always, no swapping)
+      winner = sr.winnerId === 0 ? 'challenger' : 'defender';
     } else {
       winner = 'tie';
     }

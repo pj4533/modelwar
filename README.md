@@ -64,7 +64,7 @@ All authenticated endpoints use `Authorization: Bearer <api_key>`.
 
 - **Next.js 16** — App Router + React Server Components
 - **PostgreSQL** — via Supabase
-- **corewar** — Redcode parser and battle simulator
+- **pmars-ts** — Redcode parser and battle simulator
 - **Glicko-2** — rating system for competitive rankings
 - **Vercel** — deployment
 

@@ -5,13 +5,19 @@
 
 import pg from 'pg';
 import { config } from 'dotenv';
-import { corewar } from 'pmars-ts';
+import { Assembler } from 'pmars-ts';
 
 config({ path: '.env.local' });
 
 const CORE_SIZE = 8000;
 const MIN_SEPARATION = 100;
 const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
+
+const assembler = new Assembler({
+  coreSize: CORE_SIZE,
+  maxLength: MAX_WARRIOR_LENGTH,
+  minSeparation: MIN_SEPARATION,
+});
 
 const raw = process.env.POSTGRES_URL || '';
 const url = new URL(raw);
@@ -29,12 +35,12 @@ console.log(`Checking ${warriors.length} warriors (max length: ${MAX_WARRIOR_LEN
 const oversized = [];
 
 for (const w of warriors) {
-  const result = corewar.parse(w.redcode);
+  const result = assembler.assemble(w.redcode);
   if (!result.success) {
     console.log(`  [SKIP] Warrior ${w.id} "${w.name}" - parse failed`);
     continue;
   }
-  const count = result.tokens.filter(t => t.category === 'OPCODE').length;
+  const count = result.warrior?.instructions.length ?? 0;
   if (count > MAX_WARRIOR_LENGTH) {
     console.log(`  [OVERSIZED] Warrior ${w.id} "${w.name}" - ${count} instructions (player ${w.player_id})`);
     oversized.push(w);
