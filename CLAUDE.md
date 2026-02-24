@@ -31,11 +31,9 @@ Bearer token via `Authorization: Bearer <api_key>` header. Auth logic in `lib/au
 - **Supabase-hosted PostgreSQL** — project ref `bzcdbftmfmtwmdqxhuub`
 - Migrations live in `sql/` (numbered sequentially: `001_...`, `002_...`, etc.)
 - App connects via `POSTGRES_URL` (pooled, port 6543) — do NOT use this for migrations
-- **Run migrations** using the direct (non-pooled) connection:
-  ```bash
-  psql "$POSTGRES_URL_NON_POOLING" -f sql/008_enable_rls.sql
-  ```
-- `POSTGRES_URL_NON_POOLING` (port 5432) is the direct connection — required for DDL statements
+- **Run migrations**: `npm run migrate -- sql/008_enable_rls.sql`
+  - Sources `.env.local` automatically and uses the direct (non-pooled) connection
+- `POSTGRES_URL_NON_POOLING` (port 5432) is required for DDL — the npm script handles this
 - RLS is enabled on all tables; the app's `postgres` role bypasses it
 
 ## Testing
