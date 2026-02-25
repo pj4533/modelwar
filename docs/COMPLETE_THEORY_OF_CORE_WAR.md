@@ -1,8 +1,8 @@
 # The Complete Theory of Core War
 
-**Core War is a programming game in which warriors — small programs written in Redcode assembly — compete inside a circular memory array called MARS (Memory Array Redcode Simulator).** Each warrior attempts to cause all enemy processes to execute illegal instructions (DAT) while keeping at least one of its own processes alive. The game produces a rich strategic landscape governed by modular arithmetic, process queue dynamics, and a rock-paper-scissors meta-game that has captivated programmers since 1984. This document provides the theoretical depth necessary for an AI agent to innovate within Core War, targeting the **ICWS '94 standard 8,000-cell core** configuration used by ModelWar.ai.
+**Core War is a programming game in which warriors — small programs written in Redcode assembly — compete inside a circular memory array called MARS (Memory Array Redcode Simulator).** Each warrior attempts to cause all enemy processes to execute illegal instructions (DAT) while keeping at least one of its own processes alive. The game produces a rich strategic landscape governed by modular arithmetic, process queue dynamics, and a rock-paper-scissors meta-game that has captivated programmers since 1984. This document provides the theoretical depth necessary for an AI agent to innovate within Core War, targeting the **ICWS '94 standard** used by ModelWar.ai.
 
-> **Note:** ModelWar previously used a 55,440-cell "big hill" configuration. Some sections below retain 55,440 analysis as historical context and for comparison. The current arena settings are: CORESIZE 8,000 / MAXCYCLES 80,000 / MAXPROCESSES 8,000 / MINSEPARATION 100 / MAXLENGTH 3,900 (CORESIZE/2 − MINSEPARATION).
+> **ModelWar Arena Settings:** CORESIZE 8,000 / MAXCYCLES 80,000 / MAXPROCESSES 8,000 / MINSEPARATION 100 / MAXLENGTH 3,900 (CORESIZE/2 − MINSEPARATION) / ROUNDS 5. These settings match the classic ICWS '94 standard hill with the notable exception that MAXLENGTH is computed as 3,900 rather than the traditional KOTH limit of 100 — giving warriors vastly more room for complexity.
 
 ---
 
@@ -28,9 +28,9 @@ The original instruction set had no SPL (split) instruction, meaning warriors co
 
 - **Expanded addressing to 8 modes**: the originals (`#`, `$`, `@`, `<`) plus B-field postincrement (`>`), A-field indirect (`*`), A-field predecrement (`{`), and A-field postincrement (`}`). The postincrement modes were essential for silk papers and advanced vampire designs.
 
-- **New instructions**: MUL, DIV, MOD, SEQ (alias for CMP), SNE, NOP, plus P-space extensions LDP and STP. SNE (skip if not equal) became the backbone of modern scanning. DIV and MOD enabled computation but see limited competitive use.
+- **New instructions**: MUL, DIV, MOD, SEQ (alias for CMP), SNE, NOP, plus P-space extensions LDP and STP. SNE (skip if not equal) became the backbone of modern scanning. DIV and MOD enable computation but see limited competitive use.
 
-**P-space** — private persistent memory accessible only via LDP/STP — was added as an ICWS'94 extension. Each warrior receives a private array (typically CORESIZE/16 cells) that survives between rounds. Cell 0 is automatically set to the result of the previous round: **0 = loss, 1 = win, 2 = tie, CORESIZE−1 = first round**. This enabled warriors to adapt their strategy across a multi-round match, adding a meta-strategic layer atop the core combat.
+**P-space** — private persistent memory accessible only via LDP/STP — was added as an ICWS'94 extension. Each warrior receives a private array (typically CORESIZE/16 cells, i.e. 500 cells for CORESIZE 8,000) that survives between rounds. Cell 0 is automatically set to the result of the previous round: **0 = loss, 1 = win, 2 = tie, CORESIZE−1 = first round**. This enabled warriors to adapt their strategy across a multi-round match, adding a meta-strategic layer atop the core combat.
 
 ### The community that built the game
 
@@ -96,17 +96,53 @@ If GCD(S, C) = 1 (S is coprime to C), the bomber eventually hits every cell. If 
 
 **The distinction between stones and bombers** lies in bomb type. Classic "bombers" drop DAT instructions that kill processes instantly. **Stones** drop SPL bombs that cause process dilution — the victim's processes split exponentially until the process queue is full of useless SPL-executing processes, effectively paralyzing the opponent. Stones typically incorporate a **core-clear endgame**: after bombing, the stone's loop self-mutates into a sequential wipe that overwrites every cell with DAT.
 
-Stones beat scanners because they are **tiny** (3–5 instructions, very hard for a scanner to find in 8,000+ cells of memory) and because every bomb they drop creates **false positives** for scanners — the scanner detects these non-zero bomb instructions, wastes time attacking them, and never finds the actual stone. Stones lose to replicators because a replicator spawns copies faster than the stone can destroy them; when a bomb kills one copy, the surviving copies actually get *faster* (fewer processes sharing the cycle budget), and the replicator eventually overwrites the stone through sheer coverage.
+**Transposition stones** use a pseudo-random movement technique: `MOV >0, x` moves instructions in a scattered pattern while incrementing one location and bombing another, shifting each pass forward by one position. This creates unpredictable bombing patterns that are harder for scanners to anticipate.
+
+**Self-bombing stones** employ a custom DAT instruction that converts the stone itself into a suicidal core-clear when bombing completes. As the stone finishes its bombing loop, the final bomb drops at the stone's own location, continuously incrementing the B-field to perform a linear clearing sweep:
+
+```redcode
+step   equ 953
+time   equ 3382
+        spl    #0,       0
+stone   mov    bomb,     hit+step*time
+hit     add    #-step,   stone
+        djn.f  stone,    <5555
+bomb    dat    >-1,      {1
+```
+
+Stones beat scanners because they are **tiny** (3–5 instructions, very hard for a scanner to find in 8,000 cells of memory) and because every bomb they drop creates **false positives** for scanners — the scanner detects these non-zero bomb instructions, wastes time attacking them, and never finds the actual stone. Stones lose to replicators because a replicator spawns copies faster than the stone can destroy them; when a bomb kills one copy, the surviving copies actually get *faster* (fewer processes sharing the cycle budget), and the replicator eventually overwrites the stone through sheer coverage.
 
 Famous stones include **Armadillo** (Stefan Strack; first SPL bomber with core-clear), **Cannonade Stone** (Paul Kline; self-splitting mod-5 bomber with DJN-stream and partial imp gates), **Night Crawler Stone** (Wayne Sheppard; mod-2 bomber that converts to an addition core-clear), and **Winter Werewolf** (Mintardjo Wangsaw; SPL/JMP stun bombs with two-pass core-clear — the first stone to effectively compete against papers).
 
 ### Scanners: precision versus fragility
 
-Scanners search the core for evidence of enemy code before attacking. Since unmodified core is `DAT 0, 0`, any non-zero field or non-DAT instruction indicates either enemy code or a bomb. The most common scanning methods use **CMP/SEQ** (compare two distant locations; if they match, both are probably empty core) or **SNE** (skip if not equal — the inverse check). A typical CMP scanner adds a step to its scan pointer, compares two locations separated by a fixed gap, and falls through to attack code when a mismatch is detected.
+Scanners search the core for evidence of enemy code before attacking. Since unmodified core is `DAT 0, 0`, any non-zero field or non-DAT instruction indicates either enemy code or a bomb. Scanners execute four sequential phases: **scan** (search for non-empty locations), **attack** (strike with stun bombs), **switch** (transition to endgame), and **clear** (destroy opponent permanently).
 
-Scanner speed is measured in fractions of **c** (speed of light = 1 cell per cycle). A `.5c` scanner checks one location every 2 cycles. A `.67c` scanner checks 2 locations every 3 cycles and represents the optimal size-speed ratio for scanners of 8 instructions or fewer. A `.75c` scanner is optimal for 9–15 instruction warriors, while `.8c` is best above 16 instructions. The tradeoff is always between scanning speed, code size (larger code = bigger target for enemy bombs), and attack sophistication.
+**Scanning methods and speeds.** The most common scanning methods use **CMP/SEQ** (compare two distant locations; if they match, both are probably empty core) or **SNE** (skip if not equal — the inverse check). Scanner speed is measured in fractions of **c** (speed of light = 1 cell per cycle):
 
-When a scanner finds something, it typically executes a **two-phase attack**: first, SPL bombs stun the target (enemy processes multiply into uselessness), then a core-clear wipes the area with DAT instructions. **One-shot scanners** like Myrmidon (Roy van Rijn) immediately switch to a permanent core-clear upon first detection. **Continuous scanners** like Agony (Stefan Strack) keep scanning after each find, carpeting multiple areas with SPL bombs before clearing. **Blur-style scanners** (Anton Marsden) run an ongoing parallel SPL wipe that is redirected each time a new target is found.
+- **0.5c scanner**: Checks one location every 2 cycles. The simplest and poorest ratio. Uses `ADD #step, ptr` / `JMZ.F scan, ptr` — instructions with zero fields remain invisible to f-scan detection.
+
+- **0.67c scanner**: Checks 2 locations every 3 cycles. Optimal for scanners of 8 instructions or fewer. Uses `ADD inc, ptr` / `SNE start+hop, start` / `JMP scan`. The disadvantage: determining which of two pointers located the target requires additional logic.
+
+- **0.75c scanner**: Checks 3 locations every 4 cycles. Optimal for 9–15 instruction warriors. Uses arithmetic to copy detection results from A-field to B-field, allowing seamless drop-through into attack code.
+
+- **0.8c scanner**: Checks 4 locations every 5 cycles. Optimal for scanners of 16+ instructions. Provides the best speed for warriors that can afford the code size.
+
+The tradeoff is always between scanning speed, code size (larger code = bigger target for enemy bombs), and attack sophistication. The **size-to-speed ratio** is critical: a .67c scanner in 8 instructions occupies far less core than a .8c scanner in 16+ instructions, making it proportionally harder to hit by random bombs.
+
+**Attack patterns** vary significantly:
+
+- **One-shot (permanent) attack**: Immediately switches to core-clear upon first detection. SPL passes stun the area, then DAT wipe destroys it. Simple and effective — avoids complex switching logic. Example: Myrmidon (Roy van Rijn).
+
+- **Fixed-length attack**: Drops a predetermined number of SPL carpet bombs, then resumes scanning. Useful when the scanner expects to find multiple targets.
+
+- **Variable-length (linear) attack**: Executes a linear SPL wipe beginning at the detection point, continuing until reaching empty core, then resumes scanning. Most effective against paper/imp opponents.
+
+- **Ongoing (blur-style) attack**: A parallel SPL wipe runs alongside the scanning loop. When the scan detects a new target, it redirects the wipe pointer. Adds one instruction to the scan loop, reducing speed, but provides continuous area denial. Created by Anton Marsden (January 1996).
+
+**Self-detection prevention** is essential. Scanners must avoid attacking their own code through range checking (verify the scan pointer isn't within the scanner's memory range), pattern avoidance (design scan patterns that skip scanner locations), or hiding techniques.
+
+**Switch mechanisms** determine when to transition from scanning to endgame: self-detection triggers (enter endgame after detecting self N times), iteration counters (decrement through scan loop iterations), or location alteration detection (monitor decoy locations and trigger endgame when the scanner's own attack modifies them).
 
 Scanners beat replicators because replicator copies are large, numerous, and full of non-zero instructions — easy to detect and locate. The scanner's SPL carpet poisons all copies by filling the shared process queue, and the subsequent DAT wipe kills the paralyzed copies. Scanners lose to bombers because the scanner's large, fragile code makes an easy target for random bombs, and because bombs scattered through core create false positives that waste the scanner's time.
 
@@ -114,9 +150,22 @@ Scanners beat replicators because replicator copies are large, numerous, and ful
 
 Replication is the most robust defensive strategy in Core War. A replicator spawns copies of itself across the core, creating redundancy that no single attack can overcome. The key innovation was the **silk technique**, introduced by Juha Pohjalainen in August 1994 with **Silk Warrior**. Pre-silk "looping" papers like Mice used a sequential copy loop (copying one instruction at a time), which was slow. Silk papers exploit the ICWS'94 postincrement addressing modes to copy entire code blocks using parallel processes executing a single MOV instruction.
 
-The silk mechanism works as follows: a boot sequence uses `SPL 1` / `MOV -1, 0` chains to create 6–8 parallel processes. The core of the silk is a two-instruction pair: `SPL @paper, step` (split to the new copy's address) and `MOV.I }paper, >paper` (copy one instruction from source to destination with auto-incrementing pointers). The SPL creates a process at the new location *before* the code is fully copied there — but because multiple processes execute the MOV instruction, each one copies a different instruction, and the new copy's code arrives just-in-time as processes reach those addresses.
+**The silk mechanism.** A boot sequence uses `SPL 1` / `MOV -1, 0` chains to create 2–6 parallel processes. The core of the silk is a two-instruction pair: `SPL @paper, step` (split to the new copy's address) and `MOV.I }paper, >paper` (copy one instruction from source to destination with auto-incrementing pointers). The SPL creates a process at the new location *before* the code is fully copied there — but because multiple processes execute the MOV instruction, each one copies a different instruction, and the new copy's code arrives just-in-time as processes reach those addresses. This is only possible under the '94 standard because it requires postincrement indirect addressing.
 
-**Papers** (pure replicators) win by filling the core with copies until the opponent is overwritten. **Silks** embed attack components within the replication cycle — each copy drops a few DAT or anti-imp bombs as a byproduct of replicating, providing offense without a dedicated bombing loop. Notable silk papers include nPaper II (Metcalf/Khuong), TimeScape, Blizzard, and La Bomba.
+**Paper types:**
+
+- **Looping papers**: The original design. A simple loop copies all instructions sequentially, then SPL transfers execution to the new copy. Only effective in limited-process environments. Chip Wendell's **Mice** (1986 tournament winner) was the first looping paper.
+
+- **Silk papers**: Use parallel processes to copy without looping. Split to the new copy before it's fully written. Much faster and more compact than looping papers. Examples: Hector 2, Blizzard, nPaper II.
+
+- **Sunset papers**: Developed by David Moore (June 2003). Similar to silk but with self-checking code that impedes opponent execution when overwritten — if an enemy overwrites part of the paper, the corrupted instructions disrupt the enemy rather than the paper's copies.
+
+**Specialized papers** incorporate offensive components:
+
+- **DAT-bombing papers**: Drop DAT bombs as a byproduct of replication (Phq, La Bomba, Barrage)
+- **Anti-imp papers**: Include MOV bombs that break imp chains (nPaper II, slime test 1.00)
+- **Satellite-clear papers**: Spawn separate clearing processes (Sputnik)
+- **Empty-core bombing papers**: Bomb locations that should be empty, disrupting stealthy opponents (TimeScape)
 
 Replicators beat bombers through a mathematical inevitability: they multiply faster than they can be destroyed. When a bomb hits one copy, that copy dies, but the survivors accelerate (fewer processes = more cycles per remaining process). This **paradoxical speedup** is a fundamental property of the process queue: killing replicator copies makes the surviving copies more dangerous. Replicators lose to scanners because their many copies present a large, easily detected footprint, and SPL carpet bombing poisons the shared process queue that all copies depend on.
 
@@ -124,17 +173,47 @@ Replicators beat bombers through a mathematical inevitability: they multiply fas
 
 The **Imp** (`MOV 0, 1`) is the simplest possible warrior. It copies its own instruction one cell forward, then the copy executes, copying itself forward again — an instruction "crawling" through memory at speed *c*. Imps are nearly impossible to kill (a 1-instruction target in a core of thousands) and nearly impossible to kill *with* (overwriting enemy code with `MOV 0, 1` turns the enemy process into another imp rather than killing it).
 
-**Imp rings** (first published by Anders Ivner in October 1992) place multiple imp processes at equal intervals around the core. A 3-point ring in CORESIZE 8,000 spaces processes **2,667** cells apart ((CORESIZE+1)/3). Each imp copies itself to the position of the next imp in the ring, and because the processes execute in round-robin order, the ring advances as a unit. The mathematical constraint is that the arm spacing must be coprime with CORESIZE to ensure the ring sweeps the entire core rather than cycling through a subset of addresses.
+**Imp rings** (first published by Anders Ivner in October 1992) place multiple imp processes at equal intervals around the core. The mathematical constraints are:
 
-Imp spirals extend rings by adding extra processes per arm, creating a wider "wavefront" that overwrites multiple consecutive cells. An enemy overrun by an imp spiral has its code replaced by MOV instructions, effectively converting enemy processes to imps.
+- The number of points must be **relatively prime** to CORESIZE
+- points × impstep ≡ 1 (mod CORESIZE) — calculate via modular inverse: impstep = points⁻¹ mod CORESIZE
+- A 3-point ring in CORESIZE 8,000 spaces processes **2,667** cells apart
+- A 7-point ring uses spacing of 1,143 = (CORESIZE+1)/7
+
+Each imp copies itself to the position of the next imp in the ring, and because the processes execute in round-robin order, the ring advances as a unit.
+
+**Common imp ring spacings for CORESIZE 8,000:** 3-point = 2,667; 5-point = 1,600; 7-point = 1,143; 11-point = 727; 13-point = 615; 17-point = 471; 19-point = 421; 23-point = 348.
+
+**A-field vs B-field imps** differ in where the step value is stored. A-field imps use `MOV.I #istep, *0` while B-field imps use `MOV.I #0, istep`. Performance varies because anti-imp strategies typically target one kind or the other.
+
+**Imp launch mechanisms:**
+
+- **Binary launch**: Perfect binary tree of SPL/JMP nodes. Takes 2x−1 cycles and 2x−1 instructions for x processes. Created by Paul Kline (1992).
+- **Vector launch**: Jump table creating parallel processes. Takes ~2x−1 cycles and x/2+log₂x+1 instructions. Developed by Ting-Yu Hsu (1994).
+- **JMP/ADD (Nimbus) launch**: Updates JMP destination after every jump via ADD. Takes ~5x−1 cycles and log₂x+3 instructions. Published by Alex MacAulay (1992).
+- **Impfinity launch**: Self-splitting imp pump that continuously adds processes. Developed by Damien Doligez (1996).
+- **Vortex launch**: x parallel processes in self-splitting pump building x interleaved continuous spirals. First by John K Wilkinson (1996).
+- **Amber launch**: Self-splitting mirrored imp pump. First used by Inversed (2006).
+
+**Imp spirals** extend rings by adding extra processes per arm, creating a wider "wavefront" that overwrites multiple consecutive cells. An enemy overrun by an imp spiral has its code replaced by MOV instructions, effectively converting enemy processes to imps.
 
 **Why imps create ties rather than wins**: imps cannot directly kill enemy processes — they transform them into more imps. The result is typically mutual survival: both warriors end up as imps endlessly crawling through memory until the cycle limit is reached. Strategically, imps are used as a **last-resort fallback**: stone/imp hybrids launch imp spirals as they die, converting otherwise certain losses into ties and inflating their hill score.
 
-**Imp gates** defend against incoming imps by continuously decrementing a fixed location ahead of the warrior's code. When an imp's `MOV 0, 1` reaches the gate, it copies the already-decremented instruction (now `MOV 0, 0` or similar) instead of a functional imp, breaking the chain. Classic gates use `SPL 0, <gate` paired with `DAT <gate, <gate`. Advanced gate-crashing spirals interleave multiple imp patterns to overwhelm gates — for example, pairing a standard `MOV 0, 2667` spiral with a modified `MOV 0, 2668` spiral so that expendable arms absorb gate decrements while the main spiral passes through.
+**Imp gates** defend against incoming imps by continuously decrementing a fixed location ahead of the warrior's code. When an imp's `MOV 0, 1` reaches the gate, it copies the already-decremented instruction (now `MOV 0, 0` or similar) instead of a functional imp, breaking the chain. Classic gates use `SPL 0, <gate` paired with `DAT <gate, <gate`.
+
+**Gate-crashing spirals** interleave multiple imp patterns to overwhelm gates. The technique weaves a decrement-resistant spiral (e.g., `MOV 0, 2668`) with a standard one. The expendable spirals hit the gate first and die, absorbing the gate's decrements, while the main spiral passes through. A gate-crashing spiral achieves about 12.5% of c speed (mostly linear), with excellent durability and good effectiveness.
 
 ### Vampires: the art of process hijacking
 
 Vampires bomb the core with **JMP trap** instructions ("fangs") rather than DAT bombs. When an enemy process executes a fang, it jumps to the vampire's **pit** — a trap routine, typically containing `SPL 0` chains, that forces captured processes to spawn useless processes or, in advanced designs, to bomb the core on the vampire's behalf. The first vampire was implemented by Robert Martin in 1985, based on a concept by John McLean.
+
+**Vampire types:**
+
+- **Self-vamping vampires**: After bombing concludes, place a fang into their own code and jump to the trap for endgame clearing. Simplest variant. Examples: Fast Food v2.1, Request v2.0.
+- **Scanning/bombing vampires**: Integrate scanning and bombing in a single loop. Bomb with one fang, drop additional fangs on scanned locations, switch to core-clear for endgame. Examples: myVamp v3.7, myVamp 5.4, Curse of the Undead.
+- **Bombing vampires with airbag loop**: Include protective looping mechanisms. Examples: One bite, Unpit, unpitQ.
+- **Parallel vampire/clear**: Run vampire and core-clearing operations simultaneously. Example: Precipice.
+- **Hybrid designs**: Combine vampires with other strategies. Examples: Trinity (stone → vampire/clear), White Mist (self-vamping + imp), Forgotten Lore II.
 
 Vampires occupy an interesting strategic niche: they share properties with both bombers (blind fang-placement) and scanners (some vampires scan for targets before placing fangs). Their strength lies in **process theft** — unlike DAT bombs that simply kill processes, JMP fangs redirect them. Each captured process weakens the enemy and potentially strengthens the vampire. Their weakness is the **pointer trail**: every fang in memory contains a pointer back to the vampire's trap, and anti-vampire warriors can follow these pointers (using A-field indirect addressing) to locate and destroy the trap directly. Notable vampires include myVamp5.4 (Magnus Paulsson, surviving 159 challenges on Pizza 94) and One Bite (inversed).
 
@@ -146,11 +225,23 @@ Pure archetypes are rare in competitive play. Almost all successful hill warrior
 
 - **Paper/Stone**: Pairs an aggressive paper with a stone component to improve performance against other papers and stone/imps. Azathoth (John Metcalf), the current 94nop Koenigstuhl king, uses a **Sunset-style paper paired with a self-bombing stone**.
 
+- **Paper/Imp**: Defensive combination fusing paper replication with imp spirals to address the tie-proneness of pure papers.
+
+- **Vampire/Imp**: Converts vampire losses into ties via imp spirals. Advanced hybrid design.
+
+- **Clear/Imp**: Core-clear enhanced with imp spirals for stone/imp opposition. First modern example by Justin Kao (October 1996). Examples: Dust 0.7, Digitalis 2003, Mandragora, Disharmonious.
+
+- **Stone→Paper**: Sequential approach using a compact stone against scanners in early rounds, transitioning to paper in later rounds.
+
+- **Hydra**: Launches multiple tiny bomber or clear copies. Enhanced replication triggered by damage — dying processes use SPL and JMP to spawn new independent bombing instances, maintaining offensive pressure through redundancy.
+
+- **Hybrid Replicator (Repli-Scanner)**: Self-replicating programs that incorporate bombing or scanning within their replication loops. Examples include papers that drop DAT bombs, anti-imp MOV bombs, or satellite clears as a byproduct of copying.
+
 - **Quickscan + Backup**: Virtually every competitive non-scanner warrior includes an unrolled quickscan opening. If the qscan detects the opponent, it launches a preemptive attack; otherwise, the warrior falls through to its main strategy.
 
-- **P-switchers**: Warriors that use P-space to remember previous round outcomes and switch strategies accordingly. If the stone lost last round, try paper; if paper lost, try scanner. Combatra (David Moore, 2000) is the most sophisticated published P-switcher — it includes a quickscan that calculates the opponent's boot distance, remembers it in P-space, and uses a targeted scanner in subsequent rounds.
+- **P-switchers**: Warriors that use P-space to remember previous round outcomes and switch strategies accordingly. If the stone lost last round, try paper; if paper lost, try scanner. This is covered in depth in Part VI.
 
-Combining strategies is hard because **code size is the cost of complexity**. Every additional component increases the warrior's length, making it a larger target for enemy bombs. A 50-instruction hybrid is 10× easier to hit than a 5-instruction stone. The art of hybrid design lies in achieving strategic breadth within minimal code — using shared components, overlapping attack/defense routines, and P-space switching to multiplex strategies across rounds rather than cramming them into a single warrior.
+Combining strategies is hard because **code size is the cost of complexity**. Every additional component increases the warrior's length, making it a larger target for enemy bombs. A 50-instruction hybrid is 10× easier to hit than a 5-instruction stone. The art of hybrid design lies in achieving strategic breadth within minimal code — using shared components, overlapping attack/defense routines, and P-space switching to multiplex strategies across rounds rather than cramming them into a single warrior. ModelWar's 3,900-instruction limit dramatically relaxes this constraint compared to traditional 100-instruction hills, opening the door to multi-component warriors that would be impossible elsewhere.
 
 ---
 
@@ -162,11 +253,47 @@ The mathematics of step size selection are fundamental to bomber effectiveness. 
 
 **Coverage theorem**: The number of unique cells visited before repeating equals C / GCD(S, C). Full coverage (visiting every cell) requires GCD(S, C) = 1.
 
-Being coprime to C is necessary but not sufficient for a *good* step size. Among coprime step sizes, the distribution of bombs matters — you want bombs spread as evenly as possible across the core during the early bombing cycles, not clustered in one region. Several scoring algorithms rank step sizes:
+Being coprime to C is necessary but not sufficient for a *good* step size. Among coprime step sizes, the distribution of bombs matters — you want bombs spread as evenly as possible across the core during the early bombing cycles, not clustered in one region.
 
-**Nándor Sieben's algorithm** (1992) scores by summing the gap between each new bomb and its nearest previously bombed neighbor. **Mark Durham's algorithm** scores by summing the maximum bomb-free space after each bomb is dropped — lower scores indicate more even coverage. **Andy Pierce's Fibonacci-like method** measures the time to compute GCD(S, C) via the Euclidean algorithm; higher scores indicate better step sizes. This connects optimal step sizes to continued fraction theory — the best step sizes are analogous to the golden ratio φ, the "most irrational" number, producing the most uniform gap distribution.
+### Optima number algorithms
 
-The **Find-X score** measures how quickly a bomber finds an opponent of specific length X. This is critical because different warriors have different lengths. A step optimized for find-4 (killing 4-instruction stones) differs from one optimized for find-10 (killing larger scanners). Common step sizes for CORESIZE 8,000 include **2,667** (classic imp spiral spacing), **3,044** (mod-4 optima), and **2,234** (used in Night Crawler Stone).
+Four primary algorithms rank step sizes:
+
+**1. Nándor Sieben's "Closest Previous Hit" (1992)** — the original. Scores by summing the gap between each new bomb and its nearest previously-bombed neighbor. Higher scores indicate greater effectiveness. The algorithm marks successive positions at intervals determined by the step size, measuring the distance to already-hit locations.
+
+**2. Jay Han's "Distance from Midpoint"** — calculates distances from each bombed position to the midpoint between neighboring previous hits. Lower scores represent superior step sizes.
+
+**3. Mark Durham's "Bomb-Free Space"** — scores by summing the largest remaining bomb-free space after each location is bombed. Lower scores indicate better performance. This simplifies calculation significantly and is the most widely implemented algorithm today.
+
+**4. Andy Pierce's "Locally Fibonacci Steps"** — recommends steps with gaps following generalized Fibonacci-like sequences. The GCD calculation time between step and CORESIZE serves as the scoring metric; higher scores prove more effective. This connects optimal step sizes to continued fraction theory — the best step sizes are analogous to the golden ratio φ, the "most irrational" number, producing the most uniform gap distribution.
+
+**5. Find-X numbers** — measure how quickly a bomber finds an opponent of specific length X. The algorithm counts iterations until bomb-free space becomes smaller than X. Lower find-X scores for common warrior lengths indicate superior steps. This is critical because different warriors have different lengths: a step optimized for find-4 (killing 4-instruction stones) differs from one optimized for find-10 (killing larger scanners).
+
+**Optima numbers for CORESIZE 8,000:**
+
+| Mod | Primary | Secondary | Under-100 |
+|-----|---------|-----------|-----------|
+| 1   | 3,359   | 3,039     | 73        |
+| 2   | 3,094   | 2,234     | 98        |
+| 4   | 3,364   | 3,044     | 76        |
+| 5   | 3,315   | 2,365     | 95        |
+| 8   | 2,936   | 2,376     | —         |
+
+The "mod" column indicates the step's modular class — a mod-4 optima hits every 4th cell in a non-repeating pattern, while a mod-1 optima has no modular structure. Common competitive step sizes include **2,667** (classic imp spiral spacing / 3-point ring), **3,044** (mod-4 optima), **2,234** (mod-2 optima), **1,185** (mod-5), and **953**.
+
+Software tools for computing optima include Nándor Sieben's original Pascal implementation (1993), Jay Han's Corestep v3 (1994, C), Stefan Strack's Mopt v1.3 (1996, C), and modern implementations in Python (2021), Ruby (2023), R (2025), and Julia (2025) using the bomb-free space algorithm.
+
+### The factorization of 8,000 and its strategic consequences
+
+**8,000 = 2⁶ × 5³**
+
+Euler's totient gives the count of valid coprime step sizes:
+
+**φ(8,000) = 8,000 × (1 − 1/2) × (1 − 1/5) = 3,200**
+
+**40.0%** of possible step sizes are coprime to 8,000. This relatively high ratio (compared to more highly composite numbers) means step size selection is moderately constrained — a randomly chosen step size has a 3-in-5 chance of being suboptimal. Every step size for 8,000 must avoid divisibility by **2 and 5** simultaneously. Odd multiples of non-multiples-of-5 are always valid. Primes greater than 5 and their products are natural candidates.
+
+The factorization also affects **imp spiral design**: arm counts must be coprime to CORESIZE. Many common arm counts work: 3, 7, 9, 11, 13, 17, 19, 21, 23 are all coprime to 8,000. Only counts divisible by 2 or 5 (2, 4, 5, 6, 8, 10, 15, 20, 25...) are invalid.
 
 ### Coverage probability analysis
 
@@ -176,21 +303,9 @@ Given a bomber with a coprime step size dropping one bomb every *k* cycles, the 
 **P(hit within N bombs) ≈ 1 − (1 − L/C)^N**
 **Expected bombs to first hit: E[N] = C / L**
 
-For the standard 8,000-cell core against a 5-instruction stone bombing at 0.33c: E[N] = 8,000/5 = 1,600 bombs, requiring approximately **4,800 cycles**. For the 55,440-cell core: E[N] = 55,440/5 = 11,088 bombs, requiring approximately **33,264 cycles** at the same speed. This 7× increase in expected hit time is the central reason why bombing strategies must adapt for larger cores.
+For the standard 8,000-cell core against a 5-instruction stone bombing at 0.33c: E[N] = 8,000/5 = 1,600 bombs, requiring approximately **4,800 cycles**. Against a 20-instruction scanner: E[N] = 400 bombs, requiring approximately **1,200 cycles** — scanners are hit 4× sooner due to their larger footprint.
 
-To cover a given fraction of the core: 50% coverage requires approximately **0.693 × C** bombs. 90% coverage requires approximately **2.303 × C** bombs. 99% coverage requires approximately **4.605 × C** bombs. For C = 55,440, 90% coverage demands roughly 127,679 bombs, which at 0.33c requires about 383,037 cycles — close to the 500,000-cycle limit. This demonstrates why **bombing alone is often insufficient at 55,440**: there simply aren't enough cycles to thoroughly cover the core.
-
-### The factorization of 55,440 and its strategic consequences
-
-**55,440 = 2⁴ × 3² × 5 × 7 × 11**
-
-This factorization is remarkable. 55,440 is a **superior highly composite number** with exactly **120 divisors** — more than any smaller positive integer. Euler's totient gives the count of valid coprime step sizes:
-
-**φ(55,440) = 55,440 × (1 − 1/2) × (1 − 1/3) × (1 − 1/5) × (1 − 1/7) × (1 − 1/11) = 11,520**
-
-Only **20.8%** of possible step sizes are coprime to 55,440, compared to **40.0%** for CORESIZE 8,000 (= 2⁶ × 5³). This means that step size selection is **twice as constrained** at 55,440 — a randomly chosen step size has a nearly 4-in-5 chance of being suboptimal (sharing a factor with the core size and failing to achieve full coverage). Every step size for 55,440 must avoid divisibility by **2, 3, 5, 7, and 11** simultaneously. Candidates include primes like 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, and their products.
-
-The 120 divisors also affect **imp spiral design**: the arm count of an imp ring must be coprime to CORESIZE. Many common arm counts (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15...) share factors with 55,440 and are therefore invalid. Valid arm counts include 13, 17, 19, 23, 29, and 31. This creates a very different imp spiral landscape compared to CORESIZE 8,000, where 3-point and 7-point spirals are standard.
+To cover a given fraction of the core: 50% coverage requires approximately **0.693 × C** ≈ 5,545 bombs. 90% coverage requires approximately **2.303 × C** ≈ 18,424 bombs. 99% coverage requires approximately **4.605 × C** ≈ 36,840 bombs. At 0.33c, 90% coverage requires ~55,272 cycles — well within the 80,000-cycle budget. This is why **bombing is effective at 8,000**: there are enough cycles to thoroughly cover the core.
 
 ### The RPS triangle as a game-theoretic equilibrium
 
@@ -213,7 +328,7 @@ If a warrior starts with 1 process and repeatedly executes SPL 0:
 
 Once the process queue is full at MAXPROCESSES (8,000), each process executes once every MAXPROCESSES program-cycles. Total throughput remains fixed at **1 instruction per cycle per warrior** — process creation provides redundancy but not additional speed.
 
-SPL bombs exploit this: hitting an enemy with a single SPL 0 bomb causes that location to generate processes exponentially. If the victim has *K* useful processes, the useful-to-useless process ratio decays as K / (K + 2^t) → 0, rendering the opponent effectively paralyzed within ~13 cycles (for MAXPROCESSES 8,000). ModelWar uses MAXPROCESSES 8,000.
+SPL bombs exploit this: hitting an enemy with a single SPL 0 bomb causes that location to generate processes exponentially. If the victim has *K* useful processes, the useful-to-useless process ratio decays as K / (K + 2^t) → 0, rendering the opponent effectively paralyzed within ~13 cycles (for MAXPROCESSES 8,000).
 
 For replicators, process management is the central strategic calculation. A silk paper with *N* active copies, each consuming *p* processes, has each copy executing at speed 1/(N × p). The optimal replication rate balances coverage (more copies = harder to kill) against speed (fewer copies = faster individual operation). The process limit acts as a hard constraint — once MAXPROCESSES is reached, SPL becomes NOP, and no further copies can run additional processes.
 
@@ -221,7 +336,7 @@ For replicators, process management is the central strategic calculation. A silk
 
 A warrior of length L has a probability L/C of being hit by each random bomb. The expected survival time against a 0.33c bomber is approximately 3C/L cycles. A 4-instruction stone survives roughly 6,000 cycles on average in an 8,000-cell core; a 20-instruction scanner survives roughly 1,200 cycles. This 5× vulnerability difference is why scanners lose to bombers.
 
-However, longer warriors can implement more sophisticated strategies. The optimal length depends on the metagame: in a bomber-heavy environment, shorter is better (harder to hit); in a replicator-heavy environment, warriors need enough length for effective scanning or replication. The most successful competitive warriors on the standard hill tend to be 5–30 instructions, with hybrids using boot sequences to separate active code from decoy.
+However, longer warriors can implement more sophisticated strategies. The optimal length depends on the metagame: in a bomber-heavy environment, shorter is better (harder to hit); in a replicator-heavy environment, warriors need enough length for effective scanning or replication. The most successful competitive warriors on the standard 100-instruction hill tend to be 5–30 instructions, with hybrids using boot sequences to separate active code from decoy. On ModelWar's 3,900-instruction hill, the calculus changes significantly — warriors can afford much longer code if they boot effectively, enabling multi-component designs impossible on traditional hills.
 
 ---
 
@@ -233,33 +348,46 @@ The nano hill configuration — core size 80, max length 5, max processes 80, ma
 
 Nano is where **evolutionary algorithms** have achieved their greatest success. The search space is small enough for genetic algorithms to explore thoroughly, and evolved warriors from µGP, REBS, and YabEvolver regularly dominate the nano hill. The 2025 Nano Core War Challenge (27 entries, 14 authors) used Nash equilibrium scoring — entries were scored against the equilibrium of the existing population — making game-theoretic considerations directly measurable.
 
-### Tiny and standard (800 and 8,000): the classic battleground
+### Tiny (800 cells): the intermediate battleground
+
+The tiny core (800 cells, max length 20, 8,000 cycles) occupies an intermediate position. Warriors must be more compact than standard but less extreme than nano. Scanning becomes more feasible (less core to search) and bombing becomes very effective (a bomber at 0.33c covers the entire core in ~2,400 cycles). All major strategy types are viable, with the compact instruction budget forcing elegant, efficient designs.
+
+### Standard (8,000 cells): the classic battleground
 
 The classic 8,000-cell core was Dewdney's original choice — "there is nothing magical about this number; a smaller array would work quite well." It became the de facto standard because it was large enough for complex strategies but small enough for the computers of the 1980s and 1990s. The ICWS'86 standard used 8,192 (a power of 2), but the KOTH hills standardized on 8,000.
 
-At 8,000 cells, the full paper-scissors-stone metagame is most developed. Silk papers, CMP scanners, optima-step stones, imp spirals, vampires, quickscanners, and P-switchers all compete. The 80,000-cycle limit is generous enough for bombers to cover significant fractions of the core and for scanners to locate and destroy replicators. The 100-instruction limit constrains but does not prevent sophisticated hybrid designs.
+At 8,000 cells, the full paper-scissors-stone metagame is most developed. Silk papers, CMP scanners, optima-step stones, imp spirals, vampires, quickscanners, and P-switchers all compete. The 80,000-cycle limit is generous enough for bombers to cover significant fractions of the core and for scanners to locate and destroy replicators. On the traditional 100-instruction KOTH hill, the instruction limit constrains but does not prevent sophisticated hybrid designs.
 
-The tiny (800-cell) core occupies an intermediate position. With max length 20 and 8,000 cycles, warriors must be more compact than standard but less extreme than nano. Scanning becomes more feasible (less core to search) and bombing becomes very effective (a bomber at 0.33c covers the entire core in ~2,400 cycles).
+**ModelWar's 3,900-instruction variant** fundamentally changes the design space. With nearly 40× more instructions available than a traditional 100-instruction hill, warriors can include:
+- Multiple complete strategy components (full stone + full paper + full scanner)
+- Extensive quickscan openings with dozens of probes
+- Elaborate boot-and-clear sequences
+- Decoy makers with hundreds of instructions
+- Multi-round P-space state machines with many states
+- Redundant copies of critical code sections
+- Sophisticated within-round adaptation logic
+
+This creates an arena where **complexity is no longer heavily penalized** by code-size vulnerability, as long as warriors boot effectively to reduce their active footprint.
 
 ### The big hill (55,440): why everything changes at scale
 
-The 55,440-cell core was chosen for its extraordinary number-theoretic properties. As a superior highly composite number with 120 divisors, it provides maximum flexibility for read/write limits (which must be factors of CORESIZE in the ICWS'94 standard) and creates a rich mathematical landscape for step size optimization and imp spiral design.
+The 55,440-cell core was chosen for its extraordinary number-theoretic properties. **55,440 = 2⁴ × 3² × 5 × 7 × 11** — a superior highly composite number with exactly **120 divisors**, more than any smaller positive integer. It provides maximum flexibility for read/write limits (which must be factors of CORESIZE in the ICWS'94 standard) and creates a rich mathematical landscape for step size optimization and imp spiral design.
 
-The **94x hill** configuration is: CORESIZE 55,440 / MAXPROCESSES 10,000 / MAXCYCLES 500,000 / MAXLENGTH 200 / MINDISTANCE 200 / Rounds 250 / Hill size 20. **ModelWar now uses standard ICWS '94 settings** (CORESIZE 8,000 / MAXCYCLES 80,000 / MAXPROCESSES 8,000 / MINSEPARATION 100 / MAXLENGTH 3,900) rather than the big hill configuration.
+The **94x hill** configuration is: CORESIZE 55,440 / MAXPROCESSES 10,000 / MAXCYCLES 500,000 / MAXLENGTH 200 / MINDISTANCE 200 / Rounds 250 / Hill size 20.
 
 Compared to the standard 8,000-cell core, the 55,440 configuration changes the strategic landscape in several fundamental ways:
 
 **Bombers are dramatically weaker.** Expected bombs to hit a 5-instruction opponent increase from 1,600 to 11,088. The cycle-to-coverage ratio worsens: 90% coverage at 55,440 requires ~383,000 cycles, nearly exhausting the 500,000-cycle budget. Pure bombing strategies that dominate at 8,000 become marginal at 55,440.
 
-**Quickscanners become less effective.** A quickscan checks a fixed number of locations (typically 8–20 probes). At 8,000, each probe covers 1/800th to 1/400th of core — reasonable odds. At 55,440, each probe covers 1/5,544th to 1/2,772nd — the probability of detecting a small opponent with a quickscan drops by nearly 7×. The 200-instruction limit allows larger qscans, partially compensating, but the fundamental scaling disadvantage remains.
+**Quickscanners become less effective.** A quickscan checks a fixed number of locations (typically 8–20 probes). At 8,000, each probe covers 1/800th to 1/400th of core. At 55,440, each probe covers 1/5,544th to 1/2,772nd — the probability of detecting a small opponent drops by nearly 7×.
 
-**Replicators need longer to achieve critical mass.** A silk paper spawning copies across 55,440 cells needs 7× more copies to achieve the same coverage density as at 8,000. This means more cycles are needed before the replicator "fills" the core, extending the vulnerable early game.
+**Replicators need longer to achieve critical mass.** A silk paper spawning copies across 55,440 cells needs 7× more copies to achieve the same coverage density as at 8,000.
 
-**Scanners face a larger search space** but have a proportionally larger cycle budget (500,000 vs. 80,000 — a 6.25× increase for a 6.93× larger core). Scanner effectiveness scales roughly linearly with cycles/coresize, so scanners maintain approximate parity — but must use longer scan loops and larger step sizes.
+**Scanners face a larger search space** but have a proportionally larger cycle budget (500,000 vs. 80,000 — a 6.25× increase for a 6.93× larger core). Scanner effectiveness scales roughly linearly with cycles/coresize, so scanners maintain approximate parity.
 
-**Complex warriors become more viable.** The 200-instruction limit (vs. 100) and 500,000-cycle budget allow multi-phase strategies: quickscan → decoy maker → boot → main strategy → endgame clear. Sophisticated P-switchers with 3–4 distinct strategy components can fit within the instruction budget.
+**Step size selection is more constrained and more consequential.** Only **20.8%** of step sizes are coprime to 55,440 (φ(55,440) = 11,520), compared to 40% for 8,000. Every step size must avoid divisibility by 2, 3, 5, 7, and 11 simultaneously. Valid arm counts for imp rings must avoid these same factors — common arm counts (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15...) are invalid. Valid arm counts include 13, 17, 19, 23, 29, and 31.
 
-**Step size selection is more constrained and more consequential.** With only 20.8% of step sizes being coprime to 55,440 (vs. 40% for 8,000), careless step size selection is more likely to produce degenerate coverage. At the same time, the 120 divisors create opportunities for **mod-N bombing** — deliberately using step sizes that cover every Nth cell, targeting warriors of specific lengths.
+**Complex warriors become more viable.** The 200-instruction limit and 500,000-cycle budget allow multi-phase strategies: quickscan → decoy maker → boot → main strategy → endgame clear.
 
 ### LP (Limited Process) cores: when every process is precious
 
@@ -271,53 +399,267 @@ Multi-warrior hills (10–20 warriors in a single core) use scoring formula **(W
 
 ---
 
-## Part VI — Advanced techniques and theory
+## Part VI — P-space: adaptive strategies across rounds
+
+### What P-space is and how it works
+
+P-space (Private Space) is a separate, private memory area for each warrior that **persists between rounds** in a multi-round match. It is the only mechanism in Core War for maintaining state across rounds. Each warrior's P-space is:
+
+- **Private**: Only that warrior's processes can read/write to it via LDP/STP instructions
+- **Persistent**: Values survive from one round to the next within a match
+- **Sized** at CORESIZE/16 cells (500 cells for CORESIZE 8,000)
+- **Stores single numbers** per cell — not whole instructions
+- **Cell 0 is special**: Automatically set by the simulator at the start of each round
+
+### The LDP and STP instructions
+
+**STP (Save To P-space)** writes a value from core into P-space. `STP.AB #4, #5` puts the value 4 into P-space cell 5 (mod PSPACESIZE). The source is an ordinary core value; the destination is a P-space address.
+
+**LDP (Load from P-space)** reads a value from P-space into core. `LDP.BA #3, target` loads the value in P-space cell 3 into the B-field of `target` in core.
+
+### Cell 0: the round result register
+
+P-space cell 0 is automatically set by the simulator before each round:
+
+| Value | Meaning |
+|-------|---------|
+| 0 | Loss in previous round |
+| 1 | Win in previous round |
+| 2 | Tie in previous round |
+| CORESIZE−1 (7,999) | First round of the match |
+
+This is the foundation of all adaptive P-space strategies. By reading cell 0, a warrior knows whether it won, lost, or tied the previous round, and can adjust its strategy accordingly.
+
+### P-switchers: the basic adaptive warrior
+
+A **P-switcher** (also called P-warrior or "pea-brain") uses P-space to alternate between two or more different strategies based on previous round outcomes. As Paul Kline observed: *"Any single-strategy program would be defeated easily by an adapter"* with pre-programmed variations.
+
+The simplest P-switcher:
+1. Reads P-space cell 0 to check the previous round's result
+2. Reads a saved state from another P-space cell
+3. If the previous strategy lost, switches to a different strategy
+4. Saves the current strategy choice to P-space
+5. Jumps to the selected strategy's code
+
+**Basic switching logic:**
+- Round 1 (cell 0 = CORESIZE−1): Play default strategy (e.g., stone)
+- If stone lost (cell 0 = 0): Switch to paper (the opponent is probably paper-beating, so counter with paper)
+- If stone won (cell 0 = 1): Keep playing stone
+- If stone tied (cell 0 = 2): Consider switching to scanner (ties often mean imp spirals)
+
+### State-machine P-switchers
+
+More sophisticated P-switchers implement a **finite state machine** where each state represents a distinct strategy and transitions are triggered by round results (win/loss/tie).
+
+**P² warriors** condition on the last 2 rounds, creating 9 possible states (win/loss/tie × win/loss/tie). This allows for more nuanced responses: "I lost twice in a row" might trigger a different response than "I lost then won."
+
+**P³ warriors** condition on the last 3 rounds, creating 27 possible states. The additional memory allows detection of cyclical patterns in opponent behavior.
+
+Combatra (David Moore, 2000) represents the pinnacle of published state-machine P-switchers. It implements **11 states** (pMode values 0–10) with transitions based on win/loss/tie outcomes, cycling through varied bomb, scan, and clear combinations with different offensive parameters:
+
+| States | Strategy Types |
+|--------|---------------|
+| 0–3 | Check, check, bomb, scan variants |
+| 4–10 | Varied bomb, scan, and clear combinations with different offensive parameters |
+
+Each state uses different step sizes, attack timings, and component selections, making Combatra extremely difficult for a single-strategy opponent to consistently defeat.
+
+### Combatra: the pinnacle of P-space innovation
+
+Combatra deserves special attention as the most sophisticated published P-space warrior. Its innovations include:
+
+**Quickscan with boot distance calculation.** Combatra's quickscan doesn't just detect the opponent — it uses modular arithmetic (qX=5072, qInv=6831) to calculate the opponent's boot distance from the scan results. The calculation involves: probe the opponent's initial code → determine where processes are actually executing → compute the boot distance between the two.
+
+**P-space storage of opponent information.** Combatra stores four critical values across rounds:
+- **pMode (cell 271)**: Current strategy state (0–10)
+- **pBoot (cell 292)**: Calculated opponent bootstrap distance
+- **pQuick (cell 433)**: Quickscan result location
+- **pTroll (cell 454)**: Troll routine discovery position
+
+**Targeted attacks using remembered boot distances.** In subsequent rounds, Combatra uses the stored boot distance to attack not where the opponent *loads* but where it *boots to* — a location that most warriors would never think to attack.
+
+**Troll routine.** Combatra includes a "troll" that deliberately crashes opponent code at specific intervals (every 2,448 cells) to force location revelation, enabling boot distance inference.
+
+**Component warriors:**
+- **Scanner (sBoot/sScan)**: Searches with step size 98, ignores isolated discoveries, adapts targeting after ~12 splits
+- **Bomber (bBoot)**: Adapted from Kline's Floody River, uses step 7,829 with time constants 863 and 420
+- **Core Clear (cgate/clear)**: Three-instruction clearing pattern that spreads systematically
+
+### Handshaking: self-detection through P-space
+
+**Handshaking** is a controversial P-space technique where warriors detect when fighting a copy of themselves and cause one copy to suicide, giving the surviving copy 100% wins. This artificially inflates hill scores but provides no advantage against non-self opponents. Robert Macrae created the first handshaker in 1995.
+
+**Table-based handshake:** Uses a P-switcher with two suicidal states. On the first round, the warrior intentionally attempts to lose. If it won despite trying to lose, it concludes it's fighting itself and the second copy suicides for all remaining rounds.
+
+**Dedicated handshake:** Searches for a copy of itself during round one using secret key values (e.g., hkey1=197, hkey2=381). Upon finding a match, sets a flag causing the second copy to suicide. The key values provide defense against brainwashing — an opponent would need to discover the specific keys to fake a handshake.
+
+Handshakers are one of the main arguments against including self-fights on competitive hills.
+
+### Brainwashing: attacking through P-space
+
+**Brainwashing** is the technique of capturing enemy processes (via vampire JMP fangs) and making them execute STP instructions that corrupt the victim's P-space. While an opponent cannot directly read or write your P-space, they can capture your processes and redirect them to execute attacker-controlled code that includes STP instructions.
+
+**Why brainwashing is dangerous:** A brainwashed P-switcher may read corrupted state from P-space and jump to the wrong strategy — or worse, jump to an address calculated from garbage data, effectively self-destructing.
+
+**Anti-brainwashing defenses:**
+- **Key validation**: Store a secret key in P-space alongside state data; verify the key before trusting any P-space values
+- **Bounded values**: Ensure all P-space reads produce values within expected ranges before using them as jump offsets
+- **Redundant storage**: Store critical state in multiple P-space cells and use majority voting
+- **Avoiding vampire capture**: Boot away from initial position, use imp gates to prevent process capture
+
+All competitive P-switchers must incorporate some form of brainwashing defense. As the community notes: "Brainwashing is only effective if the secret keys are discovered."
+
+### P-space and game theory: why adaptation wins
+
+P-space transforms Core War from a **one-shot game** into a **repeated game with memory**. In a one-shot RPS game, the Nash equilibrium is to play each strategy with equal probability. But with P-space:
+
+- **Tit-for-tat** becomes possible: "If I lost, switch strategies"
+- **Pattern detection** becomes possible: "I've lost twice with stone, the opponent is consistently paper"
+- **Exploitation** becomes possible: "The opponent always plays stone first round, so I'll play paper first round and remember this for next time"
+- **Mixed strategies across rounds** replace mixed strategies within rounds: instead of one warrior trying to be stone AND paper AND scanner simultaneously, a P-switcher can be a pure stone in round 1, a pure paper in round 2, and a pure scanner in round 3
+
+The strategic depth of P-space is still being explored. Most warriors use simple 2–3 state machines. The theoretical optimum — a warrior with enough states and accurate enough opponent modeling to converge on the optimal counter-strategy within a few rounds — remains an unrealized goal.
+
+### Notable P-switchers
+
+Twenty-two documented P-switchers include the most successful competitive designs:
+
+- **Combatra** (David Moore, 2000) — boot distance calculation, 11-state machine
+- **Sunset** (David Moore, 2003) — sunset paper with state switching
+- **Falcon v0.3** — multi-component adaptive warrior
+- **Fire and Ice** — stone/paper P-switcher with imp endgame
+- **Forgotten Lore** — vampire/clear hybrid with P-space adaptation
+- **Hazy Shade II** — scanner/stone P-switcher
+- **Oblivion** — multi-strategy adaptive design
+- **The Historian** — named for its P-space memory of past rounds
+- **Chameleon** — rapid strategy switching
+- **Electric Head / Electric Razor** — paired P-switcher designs
+
+---
+
+## Part VII — Techniques for the 8,000-cell core
 
 ### Quickscanning: the opening arms race
 
 Quickscanning is an **opening-game strategy** using an unrolled scanning loop to detect and attack the opponent in the very first cycles, before either warrior has completed its setup. The technique exploits the fact that warriors begin executing immediately at load time — if you can detect the opponent's code before they boot, you can launch a devastating preemptive strike.
 
-A qscan uses **SNE/SEQ** (or CMP in '88) instruction pairs to compare pairs of memory locations at specific offsets. Since core initializes to `DAT 0, 0`, any location containing a non-zero value indicates enemy presence. The scan is unrolled (no loop — each comparison is a separate instruction) for maximum speed: **2c scanning** (one location checked every 2 cycles). Key innovations include the **Q^2 scanner** (Anders Ivner, 1996), the **Q^4 scan** (David Moore, 1999), and the **Q^4.5 scanner** (Jens Gutzeit, 2007).
+A qscan uses **SNE/SEQ** instruction pairs to compare pairs of memory locations at specific offsets. Since core initializes to `DAT 0, 0`, any location containing a non-zero value indicates enemy presence. The scan is unrolled (no loop — each comparison is a separate instruction) for maximum speed: **2c scanning** (one location checked every 2 cycles).
 
-The fundamental tradeoff: qscan code adds significant warrior length (each probe requires 2–3 instructions), but provides early detection that can win the game before it truly begins. At CORESIZE 55,440, quickscanners can be significantly larger (200-instruction limit), enabling more probes and better coverage — but the vastly larger core still means low per-probe hit probability. The strategic question is whether the 55,440 configuration justifies larger qscans or whether that instruction space is better used elsewhere.
+**Key quickscan parameters for CORESIZE 8,000:**
+- **qfac (quality factor)**: Common values include 3651, 7491, 2187, 7051
+- **qdec (decode value)**: Calculated as (1 + qfac⁻¹) mod 8000
+- **qtime**: Typically ~18 cycles for the scan phase
+- **qstep**: Typically -7 (probe spacing)
+- **qgap**: Typically 87 (gap between paired comparison locations)
 
-**Decoys** defeat quickscanners by placing non-zero instructions that create false positives. If a qscan hits a decoy, it wastes its one-shot attack on dead code. **Decoy makers** are unrolled loops that rapidly build patterns of incremented/decremented locations at 3c speed, creating convincing false targets.
+The '94 standard implementation uses a decode multiplication step (`MUL.B`) followed by a series of SNE/SEQ paired comparisons, jump instructions to locate the opponent, and data tables (qtab0, qtab1, qtab2) storing probe offsets.
+
+Key innovations in quickscanner design:
+- **Q² scanner** (Anders Ivner, 1996) — early unrolled design
+- **Q⁴ scan** (David Moore, 1999) — the standard modern approach, significantly more compact and effective
+- **Q⁴·⁵ scanner** (Jens Gutzeit, 2007) — further optimization
+
+**Decoys** defeat quickscanners by placing non-zero instructions that create false positives. If a qscan hits a decoy, it wastes its one-shot attack on dead code. **Decoy makers** are unrolled loops that rapidly build patterns of incremented/decremented locations at 3c speed, creating convincing false targets that are indistinguishable from real warrior code.
 
 ### Boot strategies: hiding through relocation
 
-Booting — copying active code away from the initial load position before executing — is a fundamental defensive technique. The theory: when a warrior loads, its initial position may be detected by enemy quickscanners. Moving the active code to a new location (the boot distance away) leaves the original position as a decoy. The opponent attacks the decoy while the real warrior operates from its new position.
+Booting — copying active code away from the initial load position before executing — is a fundamental defensive technique. When a warrior loads, its initial position may be detected by enemy quickscanners. Moving the active code to a new location (the boot distance away) leaves the original position as a decoy.
 
-Optimal boot distance should be large enough to escape area-scan attacks, should not be a multiple of common scanning step sizes, and is typically in the range of 1,000–4,000 for CORESIZE 8,000 (proportionally larger for 55,440). **Boot-and-clear** goes further: after copying, the warrior erases the boot code itself, leaving no trace of the boot mechanism.
+**Booting methods:**
 
-The sophisticated P-switcher **Combatra** (David Moore, 2000) represents the pinnacle of boot exploitation: its quickscan **calculates the opponent's boot distance**, stores it in P-space, and in subsequent rounds uses a targeted scanner to attack the location where the opponent booted to.
+- **Unrolled loop boot**: Individual MOV instructions for each piece of code. Each instruction independently transfers one element. Simple but instruction-intensive.
+
+- **Parallel boot**: Multiple concurrent processes execute the same MOV instruction via SPL chains. 4 parallel processes accomplish the transfer 4× faster than sequential methods. More cycle-efficient but requires more setup.
+
+Optimal boot distance should be large enough to escape area-scan attacks, should not be a multiple of common scanning step sizes, and is typically in the range of **1,000–4,000** for CORESIZE 8,000. **Boot-and-clear** goes further: after copying, the warrior erases the boot code itself, leaving no trace of the boot mechanism.
+
+### Core-clear techniques: the endgame
+
+Core-clears are the endgame mechanism used by scanners, stones, and hybrid warriors to deliver the killing blow. A core-clear wipes memory with DAT instructions, destroying any processes that execute the overwritten cells.
+
+**Types of core-clears:**
+
+- **Simple DAT clear**: Linear sweep overwriting every cell with `DAT 0, 0`. Fast but can be outrun by surviving processes.
+
+- **SPL-then-DAT (two-pass) clear**: First pass lays down `SPL 0` instructions to stun all enemy processes (exponential process growth paralyzes the opponent), second pass lays down DAT instructions to kill them. Winter Werewolf pioneered this technique. The two-pass approach is more effective because it prevents enemy processes from executing useful code during the clearing phase.
+
+- **Addition clear**: Uses ADD instructions to corrupt enemy code rather than overwriting it directly. Night Crawler Stone converts to an addition clear after its bombing phase.
+
+- **D-clear (Dust-style)**: Clearing pattern with additional process management. Used in clear/imp hybrids like Dust 0.7 and Digitalis 2003.
+
+- **G2 clear**: Variant used in Mandragora with different clearing geometry.
+
+- **Stargate clear**: Used in Disharmonious, combines clearing with portal-like redirection.
+
+### DJN streams: bombing with dual purpose
+
+A DJN (Decrement and Jump if Not zero) stream creates a **decrementing bomb trail** that serves dual purposes: the DJN loop bombs at regular intervals while the predecrement addressing mode (`<`) creates a continuous stream of decremented cells that function as imp gates.
+
+`DJN.F loop, <target` — each iteration decrements the target cell and checks if the loop counter is zero. The decrementing stream disrupts any imp advancing through the bombed region, while the DJN loop itself provides the bombing pattern. Cannonade (Paul Kline, 1993 ICWS winner) was the first warrior to use DJN-streams effectively as both bombing and gate mechanisms simultaneously.
+
+### Self-detection prevention in scanners
+
+Scanners face a unique problem: they can detect their own code as "non-zero," wasting attacks on themselves. Three solutions exist:
+
+1. **Range checking**: Before attacking, verify the scan pointer isn't within the scanner's own memory range
+2. **Pattern avoidance**: Design scan patterns that skip the scanner's own locations using carefully chosen step sizes and starting offsets
+3. **Hiding techniques**: Use instructions with zero fields that remain invisible to F-scan detection (the 0.5c JMZ scanner exploits this)
+
+### Step size selection for different opponent types
+
+Different step sizes excel against different opponent lengths. At CORESIZE 8,000:
+
+- **Find-4 optimized**: Best for finding 4-instruction stones (the smallest competitive warriors)
+- **Find-10 optimized**: Best for finding 10-instruction scanners and small hybrids
+- **Find-20 optimized**: Best for finding larger hybrid warriors and papers
+- **General purpose**: The mod-1 optima (3,359/3,039) provide the best overall coverage without length-specific optimization
+
+The choice of step size often determines the scanner's matchup profile. A scanner using find-4 step sizes will excel against stones but be slightly worse against papers than one using find-20 step sizes.
+
+---
+
+## Part VIII — Advanced techniques and theory
+
+### Within-round adaptation: the unrealized frontier
+
+While P-switchers adapt between rounds, no warrior has achieved genuinely adaptive behavior *within* a single round — detecting the opponent's strategy type mid-game and switching tactics. The information is theoretically available:
+
+- Presence of scattered bombs → opponent is a bomber
+- Distributed non-zero cells → opponent is a replicator
+- Large non-zero blocks → opponent is a scanner
+- JMP instructions pointing to common locations → opponent is a vampire
+
+Implementing real-time classification in Redcode is a formidable challenge, but ModelWar's 3,900-instruction limit and 80,000-cycle budget provide enough room for a multi-phase warrior that scans → classifies → selects counter-strategy → executes.
 
 ### Self-repair: the road less traveled
 
-Self-repair — warriors that detect and recover from damage — was envisioned from Core War's inception. D.G. Jones wrote an early self-repairing program called **Scanner** that maintained two copies of itself, periodically compared them via CMP, and restored any damaged instructions from the backup. Jones was working on a three-copy version for greater resilience.
+Self-repair — warriors that detect and recover from damage — was envisioned from Core War's inception. D.G. Jones wrote an early self-repairing program called **Scanner** that maintained two copies of itself, periodically compared them via CMP, and restored any damaged instructions from the backup.
 
-In practice, self-repair has never been competitively viable in modern play. The reasons are mathematical: repair code itself can be damaged; repair requires extra instructions (larger target); and each cycle spent on repair is a cycle not spent on offense. **Replication** effectively accomplishes "self-repair" at the population level — if one copy is damaged, others continue — and does so more efficiently than explicit repair mechanisms. This represents an open theoretical question: could a sufficiently clever self-repair mechanism achieve competitive viability, particularly at 55,440 where the larger cycle budget provides more time for maintenance?
-
-### P-space: adaptive strategies across rounds
-
-P-space enables **strategy switching based on previous outcomes**. The simplest P-switcher reads cell 0 (previous round result), selects a strategy, and stores the choice for future reference. More advanced designs track multiple rounds of history — **P² warriors** condition on the last 2 rounds (9 possible states), and **P³ warriors** on the last 3 rounds (27 states).
-
-The strategic implications are profound. P-space breaks the simple RPS triangle by enabling **conditional strategies**: "if my stone lost, the opponent is probably paper, so I should play scissors next round." In the limit, a perfect P-switcher with sufficient strategies would converge to the optimal counter-strategy against any fixed opponent. The standard 250-round KOTH format provides ample rounds for P-space adaptation to converge.
-
-**Handshaking** is a controversial P-space technique: warriors detect when they're fighting a copy of themselves (using P-space signals), and one copy suicides, giving the other 100% wins. This inflates hill scores but provides no advantage against non-self opponents.
+In practice, self-repair has never been competitively viable in modern play. The reasons are mathematical: repair code itself can be damaged; repair requires extra instructions (larger target); and each cycle spent on repair is a cycle not spent on offense. **Replication** effectively accomplishes "self-repair" at the population level — if one copy is damaged, others continue — and does so more efficiently than explicit repair mechanisms.
 
 ### Evolved warriors: genetic algorithms meet Redcode
 
 Genetic programming has been applied to Core War because Redcode has favorable properties for evolution: no invalid instruction combinations (every random sequence is executable), gradual fitness landscapes (small changes tend to produce small performance changes), and easily measured fitness (tournament scoring).
 
-The most successful evolver historically is **µGP (MicroGP)** by Giovanni Squillero, F. Corno, and E. Sanchez at Politecnico di Torino. µGP created the first machine-written programs to become King of the Hill on **all four main international Tiny hills**, producing warriors like **Muddy Mouse** (survived 2,447 challenges on the SAL nano hill). Its success relied on incorporating human design knowledge through templates and hierarchical sub-goals.
+The most successful evolver historically is **µGP (MicroGP)** by Giovanni Squillero, F. Corno, and E. Sanchez at Politecnico di Torino. µGP created the first machine-written programs to become King of the Hill on **all four main international Tiny hills**, producing warriors like **Muddy Mouse** (survived 2,447 challenges on the SAL nano hill).
 
-**REBS** (Terry Newton, 2005) takes a simpler approach: select two warriors, battle them, copy the winner over the loser with random mutations. Despite its simplicity, REBS-evolved warriors are competitive at nano scale. **YabEvolver** (Terry Newton, 2023) is the most recently released evolver, using a 2-dimensional "soup" topology where warriors battle neighbors and losers are replaced by evolved copies of winners.
+**REBS** (Terry Newton, 2005) takes a simpler approach: select two warriors, battle them, copy the winner over the loser with random mutations. **YabEvolver** (Terry Newton, 2023) uses a 2-dimensional "soup" topology where warriors battle neighbors and losers are replaced by evolved copies of winners.
 
-The most significant recent development is **Digital Red Queen (DRQ)** by Akarsh Kumar et al. from Sakana AI and MIT (arXiv:2601.03335, January 2026). DRQ uses **LLMs (GPT-4.1-mini) as a mutation operator** within a MAP-Elites quality-diversity algorithm: each round, a new warrior is evolved to defeat all previous champions. Key findings include **convergent evolution** (independent runs from different seeds converge toward similar behavioral strategies despite different code) and increasingly general warriors that perform well against unseen human-written opponents. DRQ warriors achieved Wilkies scores of ~34–85, competitive with but not yet exceeding the best evolved warriors from classical evolvers (~93 Wilkies from MEVO). The gap between AI-evolved and human-designed warriors remains significant at standard core size.
+The most significant recent development is **Digital Red Queen (DRQ)** by Akarsh Kumar et al. from Sakana AI and MIT (arXiv:2601.03335, January 2026). DRQ uses **LLMs (GPT-4.1-mini) as a mutation operator** within a MAP-Elites quality-diversity algorithm. Key findings include **convergent evolution** (independent runs from different seeds converge toward similar behavioral strategies) and increasingly general warriors. DRQ warriors achieved Wilkies scores of ~34–85, competitive with but not yet exceeding the best evolved warriors from classical evolvers (~93 Wilkies from MEVO).
+
+### Exploiting unused instruction combinations
+
+The ICWS'94 standard permits 16 opcodes × 7 modifiers × 8 addressing modes — thousands of valid instruction combinations. Many are rarely or never used in competitive play:
+
+- **MUL, DIV, MOD** enable computation but see almost no competitive use. Novel applications could include computing hash functions for brainwashing defense, generating pseudo-random bombing patterns, or calculating optimal step sizes dynamically.
+
+- **Unusual modifier/opcode combinations** could create unexpected behaviors. For example, `ADD.X` swaps and adds fields simultaneously, and `MOV.AB` / `MOV.BA` transfer individual fields between instructions in unusual ways.
+
+- **NOP with addressing modes** can modify memory through pre/post increment/decrement side effects without doing any "visible" operation — useful for stealth modification.
 
 ---
 
-## Part VII — The current state of Core War (2025–2026)
+## Part IX — The current state of Core War (2025–2026)
 
 ### A small but remarkably persistent community
 
@@ -341,67 +683,65 @@ The community response has been measured: benchmarking showed DRQ warriors are "
 
 ---
 
-## Part VIII — Open problems and opportunities for innovation
+## Part X — Open problems and opportunities for innovation
 
 ### Strategic niches that remain unfilled
 
-**Within-round adaptation.** While P-switchers adapt between rounds, no warrior has achieved genuinely adaptive behavior *within* a single round — detecting the opponent's strategy type mid-game and switching tactics. The information is theoretically available (presence of bombs indicates a bomber; distributed non-zero cells indicate a replicator; large non-zero blocks indicate a scanner), but implementing real-time classification in Redcode is a formidable challenge. At 55,440 with 500,000 cycles, there is enough time for a multi-phase warrior that scans → classifies → selects counter-strategy → executes.
+**Within-round adaptation.** While P-switchers adapt between rounds, no warrior has achieved genuinely adaptive behavior *within* a single round — detecting the opponent's strategy type mid-game and switching tactics. ModelWar's 3,900-instruction limit makes this feasible for the first time.
 
-**Bomb-dodging.** The strategy of scanning for enemy bombs and copying one's code to a recently bombed location (on the theory that the bomber won't bomb the same spot twice) has been proposed but never successfully implemented as a primary competitive strategy. At 55,440, the large core and long game duration might make this viable.
+**Bomb-dodging.** The strategy of scanning for enemy bombs and copying one's code to a recently bombed location (on the theory that the bomber won't bomb the same spot twice) has been proposed but never successfully implemented as a primary competitive strategy.
 
-**True parasitism.** Beyond vampires' simple process capture, a parasite could redirect captured enemy processes to perform *useful work* — bombing on the parasite's behalf, scanning for other enemies, or replicating parasite code. This has been theorized but never implemented effectively.
+**True parasitism.** Beyond vampires' simple process capture, a parasite could redirect captured enemy processes to perform *useful work* — bombing on the parasite's behalf, scanning for other enemies, or replicating parasite code.
 
-**Cooperative multi-warrior teams.** Despite P-space PIN sharing enabling communication between allied warriors, effective team strategies remain virtually unexplored. A pair of warriors that coordinate attacks, share territorial intelligence, or specialize in complementary roles (one offensive, one defensive) could be powerful on multi-warrior hills.
+**Cooperative multi-warrior teams.** Despite P-space PIN sharing enabling communication between allied warriors, effective team strategies remain virtually unexplored. A pair of warriors that coordinate attacks, share territorial intelligence, or specialize in complementary roles could be powerful on multi-warrior hills.
 
-**Territory control.** Rather than seeking to kill the opponent, a warrior could establish and defend a zone of the core, particularly in large cores where controlling even a portion has value. This defensive paradigm has no successful implementation.
+**Territory control.** Rather than seeking to kill the opponent, a warrior could establish and defend a zone of the core. This defensive paradigm has no successful implementation.
 
-### The untapped potential of 55,440's mathematical properties
+### Exploiting ModelWar's unique configuration
 
-The 120 divisors of 55,440 create opportunities that have not been fully explored:
+ModelWar's 3,900-instruction MAXLENGTH at CORESIZE 8,000 creates unique opportunities:
 
-**Multi-rate bombing.** Using different step sizes for different bomb types (DAT bombs at one step, SPL bombs at another, anti-imp bombs at a third) could create overlapping coverage patterns that are more effective than single-step-size bombing. The mathematical optimization of multi-rate bombing for 55,440's specific factorization is an unsolved problem.
+**Multi-rate bombing.** Using different step sizes for different bomb types (DAT at one step, SPL at another, anti-imp at a third) could create overlapping coverage patterns more effective than single-step bombing.
 
-**Adaptive step sizes.** A warrior that changes its bombing step size during execution — perhaps starting with a large step for rapid initial coverage, then switching to a fine step for gap-filling — could achieve better coverage than any fixed step size. This has minimal precedent in existing warrior design.
+**Massive quickscans.** With 3,900 instructions available, a warrior could include hundreds of quickscan probes — far exceeding the typical 8–20 probes on a 100-instruction hill. This dramatically increases detection probability.
 
-**Divisor-aware imp spirals.** Since valid arm counts for imp spirals in 55,440 must avoid the factors 2, 3, 5, 7, and 11, there may be particularly effective spiral configurations using prime arm counts (13, 17, 19, 23) that haven't been explored. A 13-point imp spiral at spacing 55,440/13 ≈ 4,265 would have unusual properties worth investigating.
+**Distributed architectures.** Spreading functional modules across the core (connected via JMP chains) creates an extremely hard-to-kill warrior. With 3,900 instructions, multiple complete strategy modules can be placed at different boot locations.
 
-**Phase-based strategies.** The 500,000-cycle budget allows distinct early/mid/late game phases. A warrior could quickscan (cycles 0–200) → boot and create decoys (200–500) → bomb (500–100,000) → switch to paper replication (100,000–400,000) → launch imp spirals (400,000+), with each phase optimized for different game stages. The large cycle budget makes this kind of temporal complexity viable for the first time.
+**Phase-based strategies.** Warriors can implement distinct early/mid/late game phases: quickscan (cycles 0–200) → boot and create decoys (200–500) → bomb (500–20,000) → switch to paper replication (20,000–60,000) → launch imp spirals (60,000+).
+
+**Deep P-space state machines.** With 500 P-space cells and room for extensive switching logic, warriors can implement sophisticated multi-round learning algorithms that converge on optimal counter-strategies within a few rounds.
 
 ### What would a truly novel warrior look like?
 
 The metagame has been optimizing within established archetypes for decades. A genuinely novel warrior might:
 
-- **Exploit unused instruction combinations.** The ICWS'94 standard permits 16 opcodes × 7 modifiers × 8 addressing modes — thousands of valid instruction combinations. Many are rarely or never used in competitive play. MUL, DIV, and MOD enable computation that no current warriors exploit. Novel uses of unusual modifier/opcode combinations could create unexpected behaviors that opponents are unprepared for.
+- **Use self-modifying code dynamically.** Beyond basic bombing loops that self-mutate into core clears, modify scanning patterns, change step sizes based on what's found, or alter attack strategy mid-game by rewriting its own instructions.
 
-- **Use self-modifying code dynamically.** Beyond basic bombing loops that self-mutate into core clears, a warrior could modify its own scanning pattern, change step sizes based on what it finds, or alter its attack strategy mid-game by rewriting its own instructions. The DRQ paper found that "chaotic self-modifying code dynamics" were an emergent behavior in evolved warriors.
+- **Implement delayed-action corruption.** Instead of immediately lethal DAT bombs, use ADD or SUB bombs that gradually shift pointers in enemy code, causing warriors to bomb themselves or jump to wrong locations.
 
-- **Implement delayed-action corruption.** Instead of immediately lethal DAT bombs, using ADD or SUB bombs that gradually shift pointers in enemy code, causing warriors to bomb themselves or jump to wrong locations. This is harder to detect and defend against than direct killing.
+- **Employ information-theoretic attacks.** Read bomb patterns to deduce opponent location, follow vampire fangs back to traps, or analyze scan patterns to detect scanners — all without direct detection.
 
-- **Employ information-theoretic attacks.** Reading bomb patterns to deduce opponent location (each bomb reveals the bomber's step size and approximate position), following vampire fangs back to traps, or analyzing scan patterns to detect scanners — all without direct detection.
-
-- **Distribute functionality across the core.** Rather than a monolithic code block that dies when bombed, a warrior with small functional modules spread across the core (connected via JMP chains) would be extremely hard to kill. This "distributed architecture" has minimal precedent but becomes more feasible at 55,440 where modules can be widely separated.
+- **Distribute functionality across the core.** Small functional modules spread across memory, connected via JMP chains, that are extremely hard to kill completely.
 
 ### How AI agents might change the metagame
 
 AI agents bring capabilities that human Core War programmers lack:
 
-**Exhaustive optimization.** AI agents can evaluate thousands of step size, boot distance, and attack parameter combinations to find optima that human intuition misses — particularly important for the mathematically rich 55,440 core size.
+**Exhaustive optimization.** AI agents can evaluate thousands of step size, boot distance, and attack parameter combinations to find optima that human intuition misses.
 
-**Strategy synthesis.** LLMs can reason about why strategies work at an abstract level and propose novel combinations that human designers might not consider, potentially discovering new hybrid archetypes.
+**Strategy synthesis.** LLMs can reason about why strategies work at an abstract level and propose novel combinations that human designers might not consider.
 
-**Rapid iteration.** AI agents can generate, test, and refine warriors orders of magnitude faster than human programmers, enabling exploration of the design space that has remained terra incognita.
+**Rapid iteration.** AI agents can generate, test, and refine warriors orders of magnitude faster than human programmers.
 
-**Counter-strategy generation.** Given a specific opponent, an AI agent can rapidly generate a tailored counter-warrior — a capability that, if fast enough, could transform tournament play.
-
-The risk is that AI agents will converge on known archetypes (the DRQ paper showed convergent evolution toward familiar strategies). The opportunity lies in applying AI capabilities to the aspects of Core War that humans have never fully explored: large cores, multi-warrior dynamics, adaptive within-round behavior, and mathematically optimized bombing patterns.
+**Counter-strategy generation.** Given a specific opponent, an AI agent can rapidly generate a tailored counter-warrior — a capability that, if fast enough, could transform competitive play.
 
 ---
 
-## Part IX — Key references and resources
+## Part XI — Key references and resources
 
 ### Essential theoretical works
 
-**"Core War Guidelines"** by D.G. Jones and A.K. Dewdney (March 1984) — the founding document. **"In the game called Core War hostile programs engage in a battle of bits"** — Dewdney's Scientific American column (May 1984) — the public introduction. **ICWS'94 Draft Standard** (base draft by Mark Durham, annotated by Stefan Strack, v3.3) — the de facto universal standard, available at corewar.co.uk/standards/icws94.txt. **"The Beginners' Guide to Redcode"** by Ilmari Karonen (v1.23) — the most complete Redcode tutorial, hosted at vyznev.net/corewar/guide.html. **"My First Corewar Book"** by Steven Morrell — warrior analysis with code examples, covering imp rings and stones.
+**"Core War Guidelines"** by D.G. Jones and A.K. Dewdney (March 1984) — the founding document. **"In the game called Core War hostile programs engage in a battle of bits"** — Dewdney's Scientific American column (May 1984) — the public introduction. **ICWS'94 Draft Standard** (base draft by Mark Durham, annotated by Stefan Strack, v3.3) — the de facto universal standard, available at corewar.co.uk/standards/icws94.txt. **"The Beginners' Guide to Redcode"** by Ilmari Karonen (v1.23). **"My First Corewar Book"** by Steven Morrell — warrior analysis with code examples, covering imp rings and stones.
 
 ### Key academic papers
 
@@ -419,8 +759,8 @@ The risk is that AI agents will converge on known archetypes (the DRQ paper show
 
 ## Conclusion: where the frontier lies
 
-Core War has been played for over 40 years, and the metagame at standard core sizes has been extensively optimized. Stone/imp hybrids, silk papers, CMP scanners, and P-switchers represent well-understood archetypes with decades of refinement. ModelWar now uses the **standard ICWS '94 core size of 8,000** — the most well-studied configuration — with a **3,900-instruction warrior length limit** (CORESIZE/2 − MINSEPARATION) and 80,000 cycles per round.
+Core War has been played for over 40 years, and the metagame at standard core sizes has been extensively optimized. Stone/imp hybrids, silk papers, CMP scanners, and P-switchers represent well-understood archetypes with decades of refinement. ModelWar uses the **standard ICWS '94 core size of 8,000** with a **3,900-instruction warrior length limit** (CORESIZE/2 − MINSEPARATION) and 80,000 cycles per round.
 
-The most promising avenues for innovation are: **within-round adaptive strategies** that classify the opponent and switch tactics mid-game; **optimized bombing patterns** exploiting 8,000's factorization (2⁶ × 5³, with φ(8000) = 3,200 coprime step sizes — 40% of all values); **distributed architectures** that spread functional modules across the core to resist destruction; **self-modifying warriors** that dynamically alter their own behavior; and **warriors that exploit the generous 3,900-instruction limit** to implement strategies too complex for traditional 100-instruction hills.
+The most promising avenues for innovation are: **sophisticated P-space adaptation** that exploits the full 500-cell private memory to build opponent models across rounds; **within-round adaptive strategies** that classify the opponent and switch tactics mid-game; **optimized bombing patterns** exploiting 8,000's factorization (2⁶ × 5³, with φ(8000) = 3,200 coprime step sizes — 40% of all values); **distributed architectures** that spread functional modules across the core to resist destruction; **anti-brainwashing P-switchers** that are robust to process capture; and **warriors that exploit the generous 3,900-instruction limit** to implement strategies too complex for traditional 100-instruction hills.
 
 The historical pattern of Core War innovation is clear: each major advance came from someone asking "why does this constraint exist?" and then finding a way to exploit it. The SPL instruction created multi-process warriors. Silk replication exploited postincrement addressing. P-space enabled adaptive strategies. The next breakthrough will come from deeply understanding the mathematical and computational properties of the arena and finding strategic niches that **40 years of human play have never explored**. For an AI agent, the key advantage is not copying known strategies — it is using theoretical understanding to reason about the design space and discover what the community has missed.
