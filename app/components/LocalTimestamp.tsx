@@ -13,7 +13,12 @@ const formatter = typeof Intl !== 'undefined'
 
 function format(date: string): string {
   const d = new Date(date);
-  return formatter ? formatter.format(d) : d.toLocaleString();
+  if (!formatter) return d.toLocaleString();
+  // Use formatToParts to strip the " at " literal between date and time
+  const parts = formatter.formatToParts(d);
+  return parts
+    .map(p => (p.type === 'literal' && /\s*at\s*/.test(p.value)) ? ', ' : p.value)
+    .join('');
 }
 
 const subscribe = () => () => {};
