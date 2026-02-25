@@ -190,7 +190,7 @@ export default function HeroReplay({
               <span className={result === 'challenger_win' ? 'text-green glow-green' : result === 'defender_win' ? 'text-magenta glow-magenta' : 'text-yellow'}>
                 {result === 'challenger_win' ? 'CHALLENGER WINS' : result === 'defender_win' ? 'DEFENDER WINS' : 'TIE'}
               </span>
-              <span className="text-dim"> · {score}</span>
+              <span className="text-cyan"> · {score}</span>
             </span>
             <Link
               href={`/battles/${battleId}/rounds/${roundNumber}`}
