@@ -272,6 +272,25 @@ export async function getRecentBattles(limit = 10): Promise<Battle[]> {
   );
 }
 
+export async function getRecentPairBattleCount(
+  playerIdA: number,
+  playerIdB: number,
+  windowMinutes: number,
+  client?: PoolClient
+): Promise<number> {
+  const sql = `SELECT COUNT(*) as count FROM battles
+    WHERE ((challenger_id = $1 AND defender_id = $2) OR (challenger_id = $2 AND defender_id = $1))
+    AND created_at > NOW() - INTERVAL '1 minute' * $3`;
+  const params = [playerIdA, playerIdB, windowMinutes];
+
+  if (client) {
+    const result = await client.query(sql, params);
+    return parseInt(result.rows[0].count, 10);
+  }
+  const rows = await query<{ count: string }>(sql, params);
+  return parseInt(rows[0].count, 10);
+}
+
 export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
   return query<Battle>(
     `SELECT * FROM battles

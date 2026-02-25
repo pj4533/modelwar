@@ -6,6 +6,7 @@ jest.mock('@/lib/auth');
 jest.mock('@/lib/db');
 jest.mock('@/lib/engine');
 jest.mock('@/lib/glicko');
+jest.mock('@/lib/diminishing');
 
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
 import {
@@ -15,9 +16,11 @@ import {
   updatePlayerRating,
   withTransaction,
   isMaintenanceMode,
+  getRecentPairBattleCount,
 } from '@/lib/db';
 import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/glicko';
+import { calculateDiminishingFactor, applyDiminishingFactor } from '@/lib/diminishing';
 
 const mockAuth = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>;
 const mockUnauth = unauthorizedResponse as jest.MockedFunction<typeof unauthorizedResponse>;
@@ -27,9 +30,12 @@ const mockCreateBattle = createBattle as jest.MockedFunction<typeof createBattle
 const mockUpdatePlayerRating = updatePlayerRating as jest.MockedFunction<typeof updatePlayerRating>;
 const mockWithTransaction = withTransaction as jest.MockedFunction<typeof withTransaction>;
 const mockIsMaintenanceMode = isMaintenanceMode as jest.MockedFunction<typeof isMaintenanceMode>;
+const mockGetRecentPairBattleCount = getRecentPairBattleCount as jest.MockedFunction<typeof getRecentPairBattleCount>;
 const mockRunBattle = runBattle as jest.MockedFunction<typeof runBattle>;
 const mockParseWarrior = parseWarrior as jest.MockedFunction<typeof parseWarrior>;
 const mockCalcRatings = calculateNewRatings as jest.MockedFunction<typeof calculateNewRatings>;
+const mockCalcDiminishing = calculateDiminishingFactor as jest.MockedFunction<typeof calculateDiminishingFactor>;
+const mockApplyDiminishing = applyDiminishingFactor as jest.MockedFunction<typeof applyDiminishingFactor>;
 
 function createRequest(url: string, options?: { method?: string; body?: unknown; headers?: Record<string, string> }) {
   const headers = options?.body
@@ -49,8 +55,9 @@ const challengerWarrior = makeWarrior({ id: 1, player_id: 1, redcode: 'MOV 0, 1'
 const defenderWarrior = makeWarrior({ id: 2, player_id: 2, redcode: 'DAT #0, #0' });
 
 
-function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie' }) {
+function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie'; pairCount?: number }) {
   const result = overrides?.overallResult ?? 'challenger_win';
+  const pairCount = overrides?.pairCount ?? 0;
   let cWins = 60, dWins = 30, tCount = 10;
   if (result === 'defender_win') { cWins = 30; dWins = 60; tCount = 10; }
   else if (result === 'tie') { cWins = 45; dWins = 45; tCount = 10; }
@@ -72,6 +79,17 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
     newRatingA: 1216, newRdA: 320, newVolatilityA: 0.06,
     newRatingB: 1184, newRdB: 320, newVolatilityB: 0.06,
   });
+  mockGetRecentPairBattleCount.mockResolvedValue(pairCount);
+  // Default: factor=1.0 for pairCount=0, pass-through values
+  mockCalcDiminishing.mockReturnValue(pairCount === 0 ? 1.0 : 1 / (pairCount + 1));
+  mockApplyDiminishing.mockImplementation((factor, oA, oB, nA, nB) => ({
+    ratingA: factor === 1.0 ? nA.rating : Math.round(oA.rating + (nA.rating - oA.rating) * factor),
+    rdA: factor === 1.0 ? nA.rd : Math.round((oA.rd + (nA.rd - oA.rd) * factor) * 100) / 100,
+    volatilityA: factor === 1.0 ? nA.volatility : Math.round((oA.volatility + (nA.volatility - oA.volatility) * factor) * 1000000) / 1000000,
+    ratingB: factor === 1.0 ? nB.rating : Math.round(oB.rating + (nB.rating - oB.rating) * factor),
+    rdB: factor === 1.0 ? nB.rd : Math.round((oB.rd + (nB.rd - oB.rd) * factor) * 100) / 100,
+    volatilityB: factor === 1.0 ? nB.volatility : Math.round((oB.volatility + (nB.volatility - oB.volatility) * factor) * 1000000) / 1000000,
+  }));
   mockUpdatePlayerRating.mockResolvedValue(undefined);
   mockCreateBattle.mockResolvedValue(makeBattle({ id: 42 }));
   mockWithTransaction.mockImplementation(async (fn) => fn({} as never));
@@ -295,5 +313,55 @@ describe('POST /api/challenge', () => {
     const data = await res.json();
     expect(data.error).toMatch(/Defender warrior is invalid or exceeds the maximum length/);
     expect(mockRunBattle).not.toHaveBeenCalled();
+  });
+
+  it('includes diminishing_factor=1.0 in response for first battle', async () => {
+    setupFullBattleMocks({ pairCount: 0 });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.diminishing_factor).toBe(1.0);
+  });
+
+  it('applies diminishing returns on repeated matchup', async () => {
+    setupFullBattleMocks({ pairCount: 1 });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.diminishing_factor).toBe(0.5);
+    expect(mockCalcDiminishing).toHaveBeenCalledWith(1);
+    expect(mockApplyDiminishing).toHaveBeenCalled();
+    // With factor 0.5: challenger rating = 1200 + (1216-1200)*0.5 = 1208
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(
+      challenger.id, 1208, 335, 0.06, 'win', expect.anything()
+    );
+    // With factor 0.5: defender rating = 1200 + (1184-1200)*0.5 = 1192
+    expect(mockUpdatePlayerRating).toHaveBeenCalledWith(
+      defender.id, 1192, 335, 0.06, 'loss', expect.anything()
+    );
+  });
+
+  it('uses diminished values in createBattle after fields', async () => {
+    setupFullBattleMocks({ pairCount: 1 });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    await POST(req);
+    expect(mockCreateBattle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        challenger_elo_after: 1208,
+        defender_elo_after: 1192,
+        challenger_rd_after: 335,
+        defender_rd_after: 335,
+      }),
+      expect.anything()
+    );
   });
 });

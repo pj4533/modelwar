@@ -6,11 +6,13 @@ import {
   updatePlayerRating,
   withTransaction,
   isMaintenanceMode,
+  getRecentPairBattleCount,
 } from '@/lib/db';
 import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
 import { conservativeRating } from '@/lib/player-utils';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
+import { calculateDiminishingFactor, applyDiminishingFactor, DIMINISHING_WINDOW_MINUTES } from '@/lib/diminishing';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
   try {
@@ -119,12 +121,24 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       newRatingB, newRdB, newVolatilityB,
     } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
 
-    // Update ratings and record battle atomically
-    const battle = await withTransaction(async (client) => {
-      await updatePlayerRating(challenger.id, newRatingA, newRdA, newVolatilityA, challengerResultType, client);
-      await updatePlayerRating(defender.id, newRatingB, newRdB, newVolatilityB, defenderResultType, client);
+    // Update ratings and record battle atomically, with diminishing returns
+    const oldA = { rating: challenger.elo_rating, rd: challenger.rating_deviation, volatility: challenger.rating_volatility };
+    const oldB = { rating: defender.elo_rating, rd: defender.rating_deviation, volatility: defender.rating_volatility };
+    const rawNewA = { rating: newRatingA, rd: newRdA, volatility: newVolatilityA };
+    const rawNewB = { rating: newRatingB, rd: newRdB, volatility: newVolatilityB };
 
-      return createBattle({
+    const { battle, diminishingFactor } = await withTransaction(async (client) => {
+      const pairCount = await getRecentPairBattleCount(
+        challenger.id, defender.id, DIMINISHING_WINDOW_MINUTES, client
+      );
+      const factor = calculateDiminishingFactor(pairCount);
+
+      const dim = applyDiminishingFactor(factor, oldA, oldB, rawNewA, rawNewB);
+
+      await updatePlayerRating(challenger.id, dim.ratingA, dim.rdA, dim.volatilityA, challengerResultType, client);
+      await updatePlayerRating(defender.id, dim.ratingB, dim.rdB, dim.volatilityB, defenderResultType, client);
+
+      const b = await createBattle({
         challenger_id: challenger.id,
         defender_id: defender.id,
         challenger_warrior_id: challengerWarrior.id,
@@ -136,21 +150,26 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         ties: battleResult.ties,
         challenger_elo_before: challenger.elo_rating,
         defender_elo_before: defender.elo_rating,
-        challenger_elo_after: newRatingA,
-        defender_elo_after: newRatingB,
+        challenger_elo_after: dim.ratingA,
+        defender_elo_after: dim.ratingB,
         challenger_rd_before: challenger.rating_deviation,
-        challenger_rd_after: newRdA,
+        challenger_rd_after: dim.rdA,
         defender_rd_before: defender.rating_deviation,
-        defender_rd_after: newRdB,
+        defender_rd_after: dim.rdB,
         challenger_redcode: challengerWarrior.redcode,
         defender_redcode: defenderWarrior.redcode,
         round_results: battleResult.rounds,
       }, client);
+
+      return { battle: b, diminishingFactor: factor };
     });
+
+    const dimA = applyDiminishingFactor(diminishingFactor, oldA, oldB, rawNewA, rawNewB);
 
     return Response.json({
       battle_id: battle.id,
       result: battleResult.overallResult,
+      diminishing_factor: diminishingFactor,
       rounds: battleResult.rounds,
       score: {
         challenger_wins: battleResult.challengerWins,
@@ -161,14 +180,14 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
         challenger: {
           name: challenger.name,
           before: conservativeRating(challenger.elo_rating, challenger.rating_deviation),
-          after: conservativeRating(newRatingA, newRdA),
-          change: conservativeRating(newRatingA, newRdA) - conservativeRating(challenger.elo_rating, challenger.rating_deviation),
+          after: conservativeRating(dimA.ratingA, dimA.rdA),
+          change: conservativeRating(dimA.ratingA, dimA.rdA) - conservativeRating(challenger.elo_rating, challenger.rating_deviation),
         },
         defender: {
           name: defender.name,
           before: conservativeRating(defender.elo_rating, defender.rating_deviation),
-          after: conservativeRating(newRatingB, newRdB),
-          change: conservativeRating(newRatingB, newRdB) - conservativeRating(defender.elo_rating, defender.rating_deviation),
+          after: conservativeRating(dimA.ratingB, dimA.rdB),
+          change: conservativeRating(dimA.ratingB, dimA.rdB) - conservativeRating(defender.elo_rating, defender.rating_deviation),
         },
       },
     });

@@ -315,6 +315,37 @@ describe('Battle queries', () => {
     );
   });
 
+  it('getRecentPairBattleCount: returns count for a player pair', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '3' }] });
+
+    const result = await db.getRecentPairBattleCount(1, 2, 2);
+
+    expect(result).toBe(3);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('challenger_id = $1 AND defender_id = $2'),
+      [1, 2, 2]
+    );
+  });
+
+  it('getRecentPairBattleCount: queries both directions', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+
+    await db.getRecentPairBattleCount(5, 10, 2);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('challenger_id = $2 AND defender_id = $1'),
+      [5, 10, 2]
+    );
+  });
+
+  it('getRecentPairBattleCount: returns 0 when no recent battles', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+
+    const result = await db.getRecentPairBattleCount(1, 2, 2);
+
+    expect(result).toBe(0);
+  });
+
   it('getFeaturedBattles: returns decisive battles ordered by closeness', async () => {
     const battles = [makeBattle({ challenger_wins: 51, defender_wins: 49 })];
     mockQuery.mockResolvedValueOnce({ rows: battles });
