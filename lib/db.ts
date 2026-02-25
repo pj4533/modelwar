@@ -267,11 +267,11 @@ export async function getRecentBattles(limit = 10): Promise<Battle[]> {
 export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
   return query<Battle>(
     `SELECT * FROM battles
-     WHERE ((challenger_wins = 3 AND defender_wins = 2)
-        OR (challenger_wins = 2 AND defender_wins = 3))
+     WHERE result IN ('challenger_win', 'defender_win')
        AND challenger_redcode IS NOT NULL
        AND defender_redcode IS NOT NULL
-     ORDER BY created_at DESC
+       AND round_results IS NOT NULL
+     ORDER BY ABS(challenger_wins - defender_wins) ASC, created_at DESC
      LIMIT $1`,
     [limit]
   );

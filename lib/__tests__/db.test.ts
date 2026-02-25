@@ -292,15 +292,15 @@ describe('Battle queries', () => {
     );
   });
 
-  it('getFeaturedBattles: returns close battles with redcode ordered by combined ELO', async () => {
-    const battles = [makeBattle({ challenger_wins: 3, defender_wins: 2 })];
+  it('getFeaturedBattles: returns decisive battles ordered by closeness', async () => {
+    const battles = [makeBattle({ challenger_wins: 51, defender_wins: 49 })];
     mockQuery.mockResolvedValueOnce({ rows: battles });
 
     const result = await db.getFeaturedBattles();
 
     expect(result).toEqual(battles);
     expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining('challenger_wins = 3 AND defender_wins = 2'),
+      expect.stringContaining('ABS(challenger_wins - defender_wins) ASC'),
       [5]
     );
   });

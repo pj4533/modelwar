@@ -229,7 +229,7 @@ export default async function Home() {
       </h2>
       {featuredBattles.length === 0 ? (
         <div className="text-dim text-sm border border-border p-6 text-center">
-          No featured battles yet. Close 3-2 battles between top players will appear here.
+          No featured battles yet. Close battles will appear here.
         </div>
       ) : (
         <div className="border border-border overflow-x-auto">
