@@ -131,6 +131,36 @@ describe('Player queries', () => {
   });
 });
 
+describe('Settings queries', () => {
+  it('isMaintenanceMode: returns true when value is true', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ key: 'maintenance_mode', value: 'true', updated_at: new Date() }] });
+
+    const result = await db.isMaintenanceMode();
+
+    expect(result).toBe(true);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE key = 'maintenance_mode'"),
+      []
+    );
+  });
+
+  it('isMaintenanceMode: returns false when value is false', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ key: 'maintenance_mode', value: 'false', updated_at: new Date() }] });
+
+    const result = await db.isMaintenanceMode();
+
+    expect(result).toBe(false);
+  });
+
+  it('isMaintenanceMode: returns false when no row exists', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const result = await db.isMaintenanceMode();
+
+    expect(result).toBe(false);
+  });
+});
+
 describe('Warrior queries', () => {
   it('upsertWarrior: inserts or updates and returns warrior', async () => {
     const warrior = makeWarrior();

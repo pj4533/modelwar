@@ -95,6 +95,22 @@ export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>)
   }
 }
 
+// Settings queries
+
+export interface Setting {
+  key: string;
+  value: string;
+  updated_at: Date;
+}
+
+export async function isMaintenanceMode(): Promise<boolean> {
+  const row = await queryOne<Setting>(
+    "SELECT * FROM settings WHERE key = 'maintenance_mode'",
+    []
+  );
+  return row?.value === 'true';
+}
+
 // Player queries
 
 export async function createPlayer(name: string): Promise<Player> {

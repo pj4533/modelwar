@@ -5,6 +5,7 @@ import {
   createBattle,
   updatePlayerRating,
   withTransaction,
+  isMaintenanceMode,
 } from '@/lib/db';
 import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
@@ -13,6 +14,14 @@ import { withAuth, handleRouteError } from '@/lib/api-utils';
 
 export const POST = withAuth(async (request: NextRequest, challenger) => {
   try {
+    const maintenance = await isMaintenanceMode();
+    if (maintenance) {
+      return Response.json(
+        { error: 'Arena is in maintenance mode. Battles are temporarily disabled.' },
+        { status: 503 }
+      );
+    }
+
     let body;
     try {
       body = await request.json();

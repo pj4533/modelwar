@@ -14,6 +14,7 @@ import {
   createBattle,
   updatePlayerRating,
   withTransaction,
+  isMaintenanceMode,
 } from '@/lib/db';
 import { runBattle, parseWarrior } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/glicko';
@@ -25,6 +26,7 @@ const mockGetWarriorByPlayerId = getWarriorByPlayerId as jest.MockedFunction<typ
 const mockCreateBattle = createBattle as jest.MockedFunction<typeof createBattle>;
 const mockUpdatePlayerRating = updatePlayerRating as jest.MockedFunction<typeof updatePlayerRating>;
 const mockWithTransaction = withTransaction as jest.MockedFunction<typeof withTransaction>;
+const mockIsMaintenanceMode = isMaintenanceMode as jest.MockedFunction<typeof isMaintenanceMode>;
 const mockRunBattle = runBattle as jest.MockedFunction<typeof runBattle>;
 const mockParseWarrior = parseWarrior as jest.MockedFunction<typeof parseWarrior>;
 const mockCalcRatings = calculateNewRatings as jest.MockedFunction<typeof calculateNewRatings>;
@@ -77,6 +79,7 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockIsMaintenanceMode.mockResolvedValue(false);
   mockUnauth.mockReturnValue(
     Response.json(
       { error: 'Unauthorized. Provide a valid API key via Authorization: Bearer <api_key>' },
@@ -86,6 +89,20 @@ beforeEach(() => {
 });
 
 describe('POST /api/challenge', () => {
+  it('returns 503 when maintenance mode is enabled', async () => {
+    mockAuth.mockResolvedValue(challenger);
+    mockIsMaintenanceMode.mockResolvedValue(true);
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.error).toMatch(/maintenance mode/);
+    expect(mockRunBattle).not.toHaveBeenCalled();
+  });
+
   it('returns 401 when not authenticated', async () => {
     mockAuth.mockResolvedValue(null);
     const req = createRequest('http://localhost:3000/api/challenge', {
