@@ -6,11 +6,12 @@ jest.mock('@/lib/auth');
 jest.mock('@/lib/db');
 
 import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
-import { getBattlesByPlayerId } from '@/lib/db';
+import { getBattlesByPlayerId, getBattleCountByPlayerId } from '@/lib/db';
 
 const mockAuth = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>;
 const mockUnauth = unauthorizedResponse as jest.MockedFunction<typeof unauthorizedResponse>;
 const mockGetBattles = getBattlesByPlayerId as jest.MockedFunction<typeof getBattlesByPlayerId>;
+const mockGetCount = getBattleCountByPlayerId as jest.MockedFunction<typeof getBattleCountByPlayerId>;
 
 function createRequest(url: string, options?: { method?: string; headers?: Record<string, string> }) {
   const init = { method: options?.method || 'GET', headers: options?.headers };
@@ -60,6 +61,38 @@ describe('GET /api/battles', () => {
     const res = await GET(req);
     expect(res.status).toBe(200);
     const data = await res.json();
+    expect(data.battles).toEqual([]);
+  });
+
+  it('returns paginated response when page param is provided', async () => {
+    const battles = [makeBattle({ id: 1 })];
+    mockAuth.mockResolvedValue(player);
+    mockGetBattles.mockResolvedValue(battles);
+    mockGetCount.mockResolvedValue(50);
+
+    const req = createRequest('http://localhost:3000/api/battles?page=2&per_page=10');
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+
+    expect(data.pagination).toEqual({
+      page: 2,
+      per_page: 10,
+      total: 50,
+      total_pages: 5,
+    });
+    expect(mockGetBattles).toHaveBeenCalledWith(1, 10, 10);
+  });
+
+  it('returns non-paginated response when no page params provided', async () => {
+    mockAuth.mockResolvedValue(player);
+    mockGetBattles.mockResolvedValue([]);
+
+    const req = createRequest('http://localhost:3000/api/battles');
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(data.pagination).toBeUndefined();
     expect(data.battles).toEqual([]);
   });
 });

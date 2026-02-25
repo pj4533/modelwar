@@ -250,11 +250,19 @@ export async function getBattleById(id: number): Promise<Battle | null> {
   );
 }
 
-export async function getBattlesByPlayerId(playerId: number, limit = 20): Promise<Battle[]> {
+export async function getBattlesByPlayerId(playerId: number, limit = 20, offset = 0): Promise<Battle[]> {
   return query<Battle>(
-    'SELECT * FROM battles WHERE challenger_id = $1 OR defender_id = $1 ORDER BY created_at DESC LIMIT $2',
-    [playerId, limit]
+    'SELECT * FROM battles WHERE challenger_id = $1 OR defender_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+    [playerId, limit, offset]
   );
+}
+
+export async function getBattleCountByPlayerId(playerId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    'SELECT COUNT(*) as count FROM battles WHERE challenger_id = $1 OR defender_id = $1',
+    [playerId]
+  );
+  return parseInt(rows[0].count, 10);
 }
 
 export async function getRecentBattles(limit = 10): Promise<Battle[]> {

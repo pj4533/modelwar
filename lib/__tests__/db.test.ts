@@ -266,7 +266,7 @@ describe('Battle queries', () => {
     );
   });
 
-  it('getBattlesByPlayerId: returns battles for player', async () => {
+  it('getBattlesByPlayerId: returns battles for player with default offset', async () => {
     const battles = [makeBattle(), makeBattle({ id: 2 })];
     mockQuery.mockResolvedValueOnce({ rows: battles });
 
@@ -275,7 +275,30 @@ describe('Battle queries', () => {
     expect(result).toEqual(battles);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('WHERE challenger_id = $1 OR defender_id = $1'),
-      [1, 20]
+      [1, 20, 0]
+    );
+  });
+
+  it('getBattlesByPlayerId: passes custom offset', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getBattlesByPlayerId(1, 10, 20);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('OFFSET $3'),
+      [1, 10, 20]
+    );
+  });
+
+  it('getBattleCountByPlayerId: returns count for player', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '42' }] });
+
+    const result = await db.getBattleCountByPlayerId(1);
+
+    expect(result).toBe(42);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('SELECT COUNT(*)'),
+      [1]
     );
   });
 

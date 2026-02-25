@@ -27,7 +27,8 @@ describe('GET /openapi.json', () => {
     expect(paths).toContain('/api/players/{id}');
     expect(paths).toContain('/api/challenge');
     expect(paths).toContain('/api/leaderboard');
-    expect(paths).toHaveLength(10);
+    expect(paths).toContain('/api/players/{id}/battles');
+    expect(paths).toHaveLength(11);
   });
 
   it('defines bearer auth security scheme', async () => {
@@ -58,6 +59,7 @@ describe('GET /openapi.json', () => {
     expect(spec.paths['/api/battles/{id}'].get.security).toBeUndefined();
     expect(spec.paths['/api/warriors/{id}'].get.security).toBeUndefined();
     expect(spec.paths['/api/players/{id}'].get.security).toBeUndefined();
+    expect(spec.paths['/api/players/{id}/battles'].get.security).toBeUndefined();
   });
 
   it('sets cache-control header', async () => {

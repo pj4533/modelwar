@@ -2,6 +2,7 @@ import {
   getPlayerById,
   getWarriorByPlayerId,
   getBattlesByPlayerId,
+  getBattleCountByPlayerId,
   getPlayersByIds,
 } from '@/lib/db';
 import type { Battle } from '@/lib/db';
@@ -23,16 +24,18 @@ export interface PlayerData {
     updated_at: Date;
   } | null;
   battles: Battle[];
+  battleCount: number;
   playerNames: Record<number, string>;
 }
 
 export async function getPlayerData(id: number): Promise<PlayerData> {
   const player = await getPlayerById(id);
-  if (!player) return { player: null, warrior: null, battles: [], playerNames: {} };
+  if (!player) return { player: null, warrior: null, battles: [], battleCount: 0, playerNames: {} };
 
-  const [warrior, battles] = await Promise.all([
+  const [warrior, battles, battleCount] = await Promise.all([
     getWarriorByPlayerId(id),
     getBattlesByPlayerId(id, 20),
+    getBattleCountByPlayerId(id),
   ]);
 
   const opponentIds = [...new Set(
@@ -45,5 +48,5 @@ export async function getPlayerData(id: number): Promise<PlayerData> {
     playerNames[p.id] = p.name;
   }
 
-  return { player, warrior, battles, playerNames };
+  return { player, warrior, battles, battleCount, playerNames };
 }

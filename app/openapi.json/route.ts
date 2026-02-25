@@ -110,15 +110,30 @@ const spec = {
         summary: 'Get your battle history',
         operationId: 'getBattles',
         security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 }, description: 'Page number (returns paginated response when provided)' },
+          { name: 'per_page', in: 'query', required: false, schema: { type: 'integer', default: 20, maximum: 100 }, description: 'Items per page (returns paginated response when provided)' },
+        ],
         responses: {
           '200': {
-            description: 'List of battles',
+            description: 'List of battles. When page/per_page params are provided, includes pagination metadata.',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
                     battles: { type: 'array', items: { type: 'object' } },
+                    pagination: {
+                      type: 'object',
+                      nullable: true,
+                      description: 'Present only when page or per_page query params are provided',
+                      properties: {
+                        page: { type: 'integer' },
+                        per_page: { type: 'integer' },
+                        total: { type: 'integer' },
+                        total_pages: { type: 'integer' },
+                      },
+                    },
                   },
                 },
               },
@@ -455,6 +470,62 @@ const spec = {
           '400': { description: 'Invalid request (self-challenge, no warrior, etc.)', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '404': { description: 'Defender not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/players/{id}/battles': {
+      get: {
+        summary: 'Get paginated battle history for a player',
+        operationId: 'getPlayerBattles',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'Player ID' },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 }, description: 'Page number' },
+          { name: 'per_page', in: 'query', required: false, schema: { type: 'integer', default: 20, maximum: 100 }, description: 'Items per page (max 100)' },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated list of battles for the player',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    battles: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          opponent: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'integer' },
+                              name: { type: 'string' },
+                            },
+                          },
+                          result: { type: 'string', enum: ['win', 'loss', 'tie'] },
+                          score: { type: 'string', description: 'Format: challenger_wins-defender_wins-ties' },
+                          rating_change: { type: 'integer' },
+                          created_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer' },
+                        per_page: { type: 'integer' },
+                        total: { type: 'integer' },
+                        total_pages: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid player ID', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Player not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },
     },

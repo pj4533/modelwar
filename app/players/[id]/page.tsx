@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { ClickableRow, ClickableLink } from '@/app/components/ClickableRow';
 import LocalTimestamp from '@/app/components/LocalTimestamp';
-import { buildEloHistory, asciiSparkline, getPlayerResult, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
+import PaginatedBattleHistory from '@/app/components/PaginatedBattleHistory';
+import { buildEloHistory, asciiSparkline, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { getPlayerData } from '@/lib/player-data';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +19,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const { player, warrior, battles, playerNames } = await getPlayerData(playerId);
+  const { player, warrior, battles, battleCount, playerNames } = await getPlayerData(playerId);
 
   if (!player) {
     return (
@@ -122,64 +122,18 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
           {'// Battle History'}
         </h2>
-        {battles.length === 0 ? (
+        {battleCount === 0 ? (
           <div className="text-dim text-sm border border-border p-6 text-center">
             No battles fought yet.
           </div>
         ) : (
-          <div className="border border-border overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Battle</th>
-                  <th className="hidden sm:table-cell">When</th>
-                  <th>Opponent</th>
-                  <th>Result</th>
-                  <th className="hidden sm:table-cell">Score</th>
-                  <th className="text-right">Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                {battles.map((battle) => {
-                  const isChallenger = battle.challenger_id === playerId;
-                  const result = getPlayerResult(battle.result, isChallenger);
-                  const opponentId = isChallenger ? battle.defender_id : battle.challenger_id;
-                  const eloBefore = isChallenger ? battle.challenger_elo_before : battle.defender_elo_before;
-                  const eloAfter = isChallenger ? battle.challenger_elo_after : battle.defender_elo_after;
-                  const rdBefore = isChallenger ? battle.challenger_rd_before : battle.defender_rd_before;
-                  const rdAfter = isChallenger ? battle.challenger_rd_after : battle.defender_rd_after;
-                  const eloDiff = conservativeRating(eloAfter, rdAfter) - conservativeRating(eloBefore, rdBefore);
-
-                  const resultColor = result === 'win' ? 'text-green' : result === 'loss' ? 'text-red' : 'text-yellow';
-                  const eloColor = eloDiff >= 0 ? 'text-green' : 'text-red';
-
-                  return (
-                    <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
-                      <td className="text-cyan">#{battle.id}</td>
-                      <td className="text-dim hidden sm:table-cell text-xs">
-                        <LocalTimestamp date={String(battle.created_at)} />
-                      </td>
-                      <td className="player-name-truncate">
-                        <ClickableLink
-                          href={`/players/${opponentId}`}
-                          className="text-cyan hover:underline"
-                        >
-                          {playerNames[opponentId] || `Player #${opponentId}`}
-                        </ClickableLink>
-                      </td>
-                      <td className={resultColor}>{result.toUpperCase()}</td>
-                      <td className="text-dim hidden sm:table-cell">
-                        {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
-                      </td>
-                      <td className={`text-right ${eloColor}`}>
-                        {eloDiff > 0 ? `+${eloDiff}` : eloDiff}
-                      </td>
-                    </ClickableRow>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <PaginatedBattleHistory
+            playerId={playerId}
+            initialBattles={battles}
+            initialPlayerNames={playerNames}
+            totalBattles={battleCount}
+            perPage={20}
+          />
         )}
       </section>
 
