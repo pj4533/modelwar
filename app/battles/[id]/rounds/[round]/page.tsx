@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ReplayViewer from '@/components/replay/ReplayViewer';
+import { NUM_ROUNDS } from '@/lib/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export default async function RoundReplayPage({
   const battleId = parseInt(id, 10);
   const roundNumber = parseInt(round, 10);
 
-  if (isNaN(battleId) || isNaN(roundNumber) || roundNumber < 1 || roundNumber > 5) {
+  if (isNaN(battleId) || isNaN(roundNumber) || roundNumber < 1 || roundNumber > NUM_ROUNDS) {
     return (
       <div className="min-h-screen p-6 max-w-3xl mx-auto">
         <p className="text-red">Invalid battle or round</p>
