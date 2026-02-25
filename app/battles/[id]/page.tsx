@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import LocalTimestamp from '@/app/components/LocalTimestamp';
 import { getBattleById, getPlayerById } from '@/lib/db';
 import type { RoundResultRecord } from '@/lib/db';
 
@@ -110,7 +111,7 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
           BATTLE #{battle.id}
         </h1>
         <p className="text-dim text-xs mt-1">
-          {new Date(battle.created_at).toLocaleString()}
+          <LocalTimestamp date={battle.created_at} />
         </p>
       </header>
 

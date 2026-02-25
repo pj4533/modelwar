@@ -9,6 +9,7 @@ import {
 import { findDecisiveRound } from '@/lib/battle-utils';
 import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
+import LocalTimestamp from '@/app/components/LocalTimestamp';
 import HeroReplay from '@/components/HeroReplay';
 import HomeTabs from '@/components/HomeTabs';
 
@@ -285,6 +286,7 @@ export default async function Home() {
             <thead>
               <tr>
                 <th className="hidden sm:table-cell">ID</th>
+                <th className="hidden sm:table-cell">When</th>
                 <th>Challenger</th>
                 <th className="text-center hidden sm:table-cell">vs</th>
                 <th>Defender</th>
@@ -298,6 +300,9 @@ export default async function Home() {
                 return (
                   <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
                     <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
+                    <td className="text-dim hidden sm:table-cell text-xs">
+                      <LocalTimestamp date={battle.created_at} />
+                    </td>
                     <td className={`${battle.result === 'challenger_win' ? 'text-green' : ''} player-name-truncate`}>
                       {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
                     </td>

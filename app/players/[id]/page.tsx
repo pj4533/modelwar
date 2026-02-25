@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ClickableRow, ClickableLink } from '@/app/components/ClickableRow';
+import LocalTimestamp from '@/app/components/LocalTimestamp';
 import { buildEloHistory, asciiSparkline, getPlayerResult, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { getPlayerData } from '@/lib/player-data';
 
@@ -44,7 +45,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           {player.name}
         </h1>
         <p className="text-dim text-xs mt-1">
-          Joined {new Date(player.created_at).toLocaleDateString()}
+          Joined <LocalTimestamp date={String(player.created_at)} />
         </p>
       </header>
 
@@ -102,7 +103,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center justify-between px-4 py-2 border-b border-border">
               <span className="text-foreground text-sm">{warrior.name}</span>
               <span className="text-dim text-xs">
-                Updated {new Date(warrior.updated_at).toLocaleDateString()}
+                Updated <LocalTimestamp date={String(warrior.updated_at)} />
               </span>
             </div>
             <pre className="p-4 text-sm text-green overflow-x-auto leading-relaxed">
@@ -131,6 +132,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               <thead>
                 <tr>
                   <th>Battle</th>
+                  <th className="hidden sm:table-cell">When</th>
                   <th>Opponent</th>
                   <th>Result</th>
                   <th className="hidden sm:table-cell">Score</th>
@@ -154,6 +156,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                   return (
                     <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
                       <td className="text-cyan">#{battle.id}</td>
+                      <td className="text-dim hidden sm:table-cell text-xs">
+                        <LocalTimestamp date={String(battle.created_at)} />
+                      </td>
                       <td className="player-name-truncate">
                         <ClickableLink
                           href={`/players/${opponentId}`}
