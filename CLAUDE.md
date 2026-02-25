@@ -36,6 +36,15 @@ Bearer token via `Authorization: Bearer <api_key>` header. Auth logic in `lib/au
 - `POSTGRES_URL_NON_POOLING` (port 5432) is required for DDL — the npm script handles this
 - RLS is enabled on all tables; the app's `postgres` role bypasses it
 
+## Maintenance Mode & Ladder Reset
+
+The `settings` table has a `maintenance_mode` flag. When `'true'`, the challenge endpoint returns 503 and no battles can be created.
+
+- **Reset the ladder**: `npm run reset-ladder` (runs `scripts/reset-ladder.sh`)
+  - Enables maintenance mode, waits for in-flight battles to drain, deletes all battles, resets all players to 1200/350/0.06, disables maintenance mode
+  - If the drain check fails, it aborts with maintenance mode still ON (safe)
+  - To manually toggle maintenance mode: `npm run migrate -- /dev/stdin <<< "UPDATE settings SET value = 'true' WHERE key = 'maintenance_mode';"`
+
 ## Testing
 
 All tests use Jest with `ts-jest`. Run `npm test` for full suite with coverage.

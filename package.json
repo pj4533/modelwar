@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "NODE_OPTIONS='--disable-warning=DEP0040' jest --coverage",
     "prepare": "husky",
-    "migrate": "bash -c 'source .env.local && psql \"$POSTGRES_URL_NON_POOLING\" -f \"$1\"' -- "
+    "migrate": "bash -c 'source .env.local && psql \"$POSTGRES_URL_NON_POOLING\" -f \"$1\"' -- ",
+    "reset-ladder": "./scripts/reset-ladder.sh"
   },
   "dependencies": {
     "next": "16.1.6",
