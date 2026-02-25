@@ -188,7 +188,7 @@ export default function HeroReplay({
           <div className="text-xs shrink-0 whitespace-nowrap flex items-center gap-3">
             <span>
               <span className={result === 'challenger_win' ? 'text-green glow-green' : result === 'defender_win' ? 'text-magenta glow-magenta' : 'text-yellow'}>
-                {result === 'challenger_win' ? 'CHALLENGER WINS' : result === 'defender_win' ? 'DEFENDER WINS' : 'TIE'}
+                {result === 'challenger_win' ? `${challengerName} WINS` : result === 'defender_win' ? `${defenderName} WINS` : 'TIE'}
               </span>
               <span className="text-cyan"> · {score}</span>
             </span>
