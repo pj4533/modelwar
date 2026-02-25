@@ -16,6 +16,7 @@ interface HeroReplayProps {
   challengerName: string;
   defenderName: string;
   score: string;
+  result: string;
 }
 
 export default function HeroReplay({
@@ -24,6 +25,7 @@ export default function HeroReplay({
   challengerName,
   defenderName,
   score,
+  result,
 }: HeroReplayProps) {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
   const workerRef = useRef<Worker | null>(null);
@@ -175,7 +177,7 @@ export default function HeroReplay({
       />
       <div className="hero-replay-overlay">
         <div className="absolute top-2 left-3 right-16 text-cyan text-xs truncate">
-          {'// NOW PLAYING: Battle #'}{battleId} — {score}
+          {'// NOW PLAYING: Battle #'}{battleId}
         </div>
         <div className="absolute bottom-0 left-0 right-0 flex justify-between items-center px-3 py-2">
           <div className="text-sm text-foreground truncate mr-2 min-w-0">
@@ -183,12 +185,20 @@ export default function HeroReplay({
             <span className="text-dim"> vs </span>
             <span className="text-magenta">{defenderName}</span>
           </div>
-          <Link
-            href={`/battles/${battleId}/rounds/${roundNumber}`}
-            className="text-cyan text-xs hover:underline shrink-0 whitespace-nowrap"
-          >
-            [WATCH FULL BATTLE]
-          </Link>
+          <div className="text-xs shrink-0 whitespace-nowrap flex items-center gap-3">
+            <span>
+              <span className={result === 'challenger_win' ? 'text-green glow-green' : result === 'defender_win' ? 'text-magenta glow-magenta' : 'text-yellow'}>
+                {result === 'challenger_win' ? 'CHALLENGER WINS' : result === 'defender_win' ? 'DEFENDER WINS' : 'TIE'}
+              </span>
+              <span className="text-dim"> · {score}</span>
+            </span>
+            <Link
+              href={`/battles/${battleId}/rounds/${roundNumber}`}
+              className="text-cyan hover:underline"
+            >
+              [WATCH FULL BATTLE]
+            </Link>
+          </div>
         </div>
       </div>
     </div>

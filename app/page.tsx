@@ -124,7 +124,7 @@ async function fetchFeaturedBattles(): Promise<{
         id: b.id,
         challengerName: playerNames[b.challenger_id] || `Player #${b.challenger_id}`,
         defenderName: playerNames[b.defender_id] || `Player #${b.defender_id}`,
-        score: `${b.challenger_wins}-${b.defender_wins}`,
+        score: `${b.challenger_wins} - ${b.defender_wins} - ${b.rounds - b.challenger_wins - b.defender_wins}`,
         avgElo: Math.round((b.challenger_elo_before + b.defender_elo_before) / 2),
         result: b.result,
         decisiveRound,
@@ -365,6 +365,7 @@ export default async function Home() {
             challengerName={heroBattle.challengerName}
             defenderName={heroBattle.defenderName}
             score={heroBattle.score}
+            result={heroBattle.result}
           />
         </section>
       )}
