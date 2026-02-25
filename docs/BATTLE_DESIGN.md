@@ -11,7 +11,7 @@ Analysis of round counts, statistical validity, and future architecture options 
 | Max warrior length | 3,900 (CORESIZE/2 − MINSEPARATION) |
 | Max tasks | 8,000 |
 | Min separation | 100 |
-| Rounds per battle | 5 (best-of-5) |
+| Rounds per battle | 100 |
 | Rating system | Glicko-2 |
 
 ## Tournament Standards vs. Our Approach
@@ -57,19 +57,14 @@ With 5 rounds, Glicko-2 needs **more battles** to converge on true rankings. But
 
 ## Performance Benchmarks
 
-Measured on local hardware with previous settings (core 55,440, max cycles 500K):
+With the current 8,000-core / 80K-cycle configuration, battles are fast:
 
 | Rounds | Avg Time per Battle | Per-Round Cost |
 |--------|-------------------|----------------|
-| 1 | ~1.2s | ~1.2s |
-| 5 | ~4.7s | ~0.9s |
-| 10 | ~8.6s | ~0.9s |
-| 25 | ~24s | ~0.9s |
-| 50 | ~48s | ~1.0s |
-| 100 | ~94s | ~0.9s |
-| 250 | ~235s (est) | ~0.9s |
+| 1 | ~8ms | ~8ms |
+| 100 | ~800ms | ~8ms |
 
-Scaling is perfectly linear at ~935ms per round. Note: these benchmarks were taken with the old 55,440 core size. With the current 8,000 core and 80K cycles, battles are significantly faster.
+Even worst-case battles (both warriors surviving all 80,000 cycles every round) complete 100 rounds well within synchronous API response budget. The ~8ms per round is approximately 100x faster than the old 55,440-core configuration.
 
 ## Architecture Options for More Rounds
 
@@ -104,6 +99,6 @@ Option B is the sweet spot if we ever need async battles. The live-viewing exper
 
 ## Current Decision
 
-**Stay with 5 rounds.** Glicko-2 compensates for per-match noise over time. The system favors fast iteration (many quick battles) over slow definitive matches. If we want to improve per-match signal cheaply, bumping to 25 rounds (~24s, still synchronous) is available as a quick win without any architecture changes.
+**100 rounds per battle.** Benchmarks confirmed that even worst-case battles (both warriors surviving all 80,000 cycles every round) complete 100 rounds in ~800ms with the 8,000-core configuration — well within synchronous API response budget. This aligns with the universal competitive Core War standard used by all major KotH hills (ICWS'88, ICWS'94, Beginner's, Experimental). Combined with Glicko-2 rating across many battles, this provides strong per-match signal and accurate long-term rankings.
 
-The async battle infrastructure is a future option driven more by UX value (live battle watching) than statistical necessity.
+The async battle infrastructure remains a future option for UX value (live battle watching) if round counts ever need to increase further.

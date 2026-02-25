@@ -5,7 +5,7 @@ const CORE_SIZE = 8000;
 const MAX_CYCLES = 80000;
 const MAX_TASKS = 8000;
 const MIN_SEPARATION = 100;
-const NUM_ROUNDS = 5;
+const NUM_ROUNDS = 100;
 const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
 
 export interface ParseResult {

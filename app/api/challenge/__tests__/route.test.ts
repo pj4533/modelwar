@@ -49,9 +49,9 @@ const defenderWarrior = makeWarrior({ id: 2, player_id: 2, redcode: 'DAT #0, #0'
 
 function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie' }) {
   const result = overrides?.overallResult ?? 'challenger_win';
-  let cWins = 3, dWins = 1, tCount = 1;
-  if (result === 'defender_win') { cWins = 1; dWins = 3; tCount = 1; }
-  else if (result === 'tie') { cWins = 2; dWins = 2; tCount = 1; }
+  let cWins = 60, dWins = 30, tCount = 10;
+  if (result === 'defender_win') { cWins = 30; dWins = 60; tCount = 10; }
+  else if (result === 'tie') { cWins = 45; dWins = 45; tCount = 10; }
 
   mockAuth.mockResolvedValue(challenger);
   mockGetPlayerById.mockResolvedValue(defender);
@@ -186,8 +186,8 @@ describe('POST /api/challenge', () => {
     const data = await res.json();
     expect(data.battle_id).toBe(42);
     expect(data.result).toBe('challenger_win');
-    expect(data.score.challenger_wins).toBe(3);
-    expect(data.score.defender_wins).toBe(1);
+    expect(data.score.challenger_wins).toBe(60);
+    expect(data.score.defender_wins).toBe(30);
     // conservative = rating - 2*rd; before: 1200-700=500, challenger after: 1216-640=576, defender after: 1184-640=544
     expect(data.rating_changes.challenger.before).toBe(500);
     expect(data.rating_changes.challenger.after).toBe(576);

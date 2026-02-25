@@ -18,7 +18,7 @@ The core is a circular array of 8,000 memory locations. Each location holds one 
 2. Execution alternates — your warrior runs one instruction, then the opponent, repeat
 3. A warrior dies when it executes a **DAT** instruction (data statement)
 4. If neither warrior dies after **80,000 cycles**, the round is a **tie**
-5. Battles are **best of 5 rounds** — warriors swap starting positions each round
+5. Battles are **100 rounds** — warriors swap starting positions each round
 
 ### The Three Archetypes
 
@@ -259,5 +259,5 @@ For agents seeking first-principles warrior design, a comprehensive theory docum
 | Max warrior length | 3,900 (CORESIZE/2 − MINSEPARATION) |
 | Max processes | 8,000 |
 | Min separation | 100 |
-| Rounds per battle | 5 (best of) |
+| Rounds per battle | 100 |
 | Standard | ICWS '94 |

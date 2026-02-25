@@ -10,8 +10,8 @@ export function findDecisiveRound(
   for (const round of roundResults) {
     if (round.winner === overallWinner) {
       winCount++;
-      if (winCount === 3) return round.round;
+      if (winCount === 51) return round.round;
     }
   }
-  return roundResults[roundResults.length - 1]?.round ?? 5;
+  return roundResults[roundResults.length - 1]?.round ?? 100;
 }

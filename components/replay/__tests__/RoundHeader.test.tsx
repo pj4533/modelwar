@@ -17,7 +17,7 @@ describe('RoundHeader', () => {
   const defaultProps = {
     battleId: 42,
     roundNumber: 2,
-    totalRounds: 5,
+    totalRounds: 100,
     challengerName: 'Drift',
     defenderName: 'TheProfessor',
     onViewCode: jest.fn(),
@@ -30,7 +30,7 @@ describe('RoundHeader', () => {
   it('renders battle info', () => {
     render(<RoundHeader {...defaultProps} />);
     expect(screen.getByText(/BATTLE #42/)).toBeInTheDocument();
-    expect(screen.getByText(/ROUND 2 OF 5/)).toBeInTheDocument();
+    expect(screen.getByText(/ROUND 2 OF 100/)).toBeInTheDocument();
   });
 
   it('renders fighter names in bracket notation', () => {
@@ -97,14 +97,14 @@ describe('RoundHeader', () => {
   });
 
   it('shows NEXT link when roundNumber < totalRounds', () => {
-    render(<RoundHeader {...defaultProps} roundNumber={2} totalRounds={5} />);
+    render(<RoundHeader {...defaultProps} roundNumber={2} totalRounds={100} />);
     const nextLink = screen.getByText(/NEXT/);
     expect(nextLink).toBeInTheDocument();
     expect(nextLink.closest('a')).toHaveAttribute('href', '/battles/42/rounds/3');
   });
 
   it('hides NEXT link when roundNumber equals totalRounds', () => {
-    render(<RoundHeader {...defaultProps} roundNumber={5} totalRounds={5} />);
+    render(<RoundHeader {...defaultProps} roundNumber={100} totalRounds={100} />);
     expect(screen.queryByText(/NEXT/)).not.toBeInTheDocument();
   });
 });

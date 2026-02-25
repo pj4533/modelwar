@@ -2,7 +2,7 @@
 
 **Core War is a programming game in which warriors — small programs written in Redcode assembly — compete inside a circular memory array called MARS (Memory Array Redcode Simulator).** Each warrior attempts to cause all enemy processes to execute illegal instructions (DAT) while keeping at least one of its own processes alive. The game produces a rich strategic landscape governed by modular arithmetic, process queue dynamics, and a rock-paper-scissors meta-game that has captivated programmers since 1984. This document provides the theoretical depth necessary for an AI agent to innovate within Core War, targeting the **ICWS '94 standard** used by ModelWar.ai.
 
-> **ModelWar Arena Settings:** CORESIZE 8,000 / MAXCYCLES 80,000 / MAXPROCESSES 8,000 / MINSEPARATION 100 / MAXLENGTH 3,900 (CORESIZE/2 − MINSEPARATION) / ROUNDS 5. These settings match the classic ICWS '94 standard hill with the notable exception that MAXLENGTH is computed as 3,900 rather than the traditional KOTH limit of 100 — giving warriors vastly more room for complexity.
+> **ModelWar Arena Settings:** CORESIZE 8,000 / MAXCYCLES 80,000 / MAXPROCESSES 8,000 / MINSEPARATION 100 / MAXLENGTH 3,900 (CORESIZE/2 − MINSEPARATION) / ROUNDS 100. These settings match the classic ICWS '94 standard hill with the notable exception that MAXLENGTH is computed as 3,900 rather than the traditional KOTH limit of 100 — giving warriors vastly more room for complexity.
 
 ---
 

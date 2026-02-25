@@ -42,6 +42,18 @@ function failAssemble(errors: Array<{ line: number; text: string }> = []) {
   };
 }
 
+function tieRounds(count: number) {
+  return Array.from({ length: count }, () => ({ winnerId: null, outcome: 'TIE' }));
+}
+
+function simRounds(cWins: number, dWins: number, ties: number) {
+  return [
+    ...Array.from({ length: cWins }, () => ({ winnerId: 0, outcome: 'WIN' })),
+    ...Array.from({ length: dWins }, () => ({ winnerId: 1, outcome: 'WIN' })),
+    ...Array.from({ length: ties }, () => ({ winnerId: null, outcome: 'TIE' })),
+  ];
+}
+
 describe('parseWarrior', () => {
   it('returns success with instruction count for valid redcode', () => {
     mockAssemble.mockReturnValueOnce(successAssemble(10));
@@ -110,58 +122,40 @@ describe('runBattle', () => {
 
     // Simulator.run returns all round results at once
     // winnerId 0 = challenger, 1 = defender (no swapping)
-    mockRun.mockReturnValueOnce([
-      { winnerId: 0, outcome: 'WIN' },   // challenger wins
-      { winnerId: 1, outcome: 'WIN' },   // defender wins
-      { winnerId: 0, outcome: 'WIN' },   // challenger wins
-      { winnerId: null, outcome: 'TIE' }, // tie
-      { winnerId: 0, outcome: 'WIN' },   // challenger wins
-    ]);
+    mockRun.mockReturnValueOnce(simRounds(60, 30, 10));
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
     expect(result.overallResult).toBe('challenger_win');
-    expect(result.challengerWins).toBe(3);
-    expect(result.defenderWins).toBe(1);
-    expect(result.ties).toBe(1);
-    expect(result.rounds).toHaveLength(5);
+    expect(result.challengerWins).toBe(60);
+    expect(result.defenderWins).toBe(30);
+    expect(result.ties).toBe(10);
+    expect(result.rounds).toHaveLength(100);
   });
 
   it('returns defender_win when defender wins majority of rounds', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: 1, outcome: 'WIN' },
-      { winnerId: 1, outcome: 'WIN' },
-      { winnerId: 1, outcome: 'WIN' },
-      { winnerId: 0, outcome: 'WIN' },
-      { winnerId: 0, outcome: 'WIN' },
-    ]);
+    mockRun.mockReturnValueOnce(simRounds(30, 60, 10));
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
     expect(result.overallResult).toBe('defender_win');
-    expect(result.defenderWins).toBe(3);
-    expect(result.challengerWins).toBe(2);
+    expect(result.defenderWins).toBe(60);
+    expect(result.challengerWins).toBe(30);
   });
 
   it('returns tie when wins are equal', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-    ]);
+    mockRun.mockReturnValueOnce(tieRounds(100));
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
     expect(result.overallResult).toBe('tie');
     expect(result.challengerWins).toBe(0);
     expect(result.defenderWins).toBe(0);
-    expect(result.ties).toBe(5);
+    expect(result.ties).toBe(100);
   });
 
   it('throws Error when challenger warrior is invalid', () => {
@@ -181,13 +175,7 @@ describe('runBattle', () => {
   it('all rounds share the same seed value', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-    ]);
+    mockRun.mockReturnValueOnce(tieRounds(100));
 
     const result = runBattle('CHALLENGER', 'DEFENDER');
 
@@ -203,13 +191,7 @@ describe('runBattle', () => {
   it('passes correct WarriorData to loadWarriors (challenger index 0, defender index 1)', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-    ]);
+    mockRun.mockReturnValueOnce(tieRounds(100));
 
     runBattle('CHALLENGER', 'DEFENDER');
 
@@ -224,13 +206,7 @@ describe('runBattle', () => {
   it('creates Simulator with direct API option names', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-      { winnerId: null, outcome: 'TIE' },
-    ]);
+    mockRun.mockReturnValueOnce(tieRounds(100));
 
     runBattle('CHALLENGER', 'DEFENDER');
 
@@ -245,29 +221,24 @@ describe('runBattle', () => {
     });
   });
 
-  it('correctly counts wins/losses/ties across all 5 rounds', () => {
+  it('correctly counts wins/losses/ties across all 100 rounds', () => {
     setupValidAssemble();
 
-    mockRun.mockReturnValueOnce([
-      { winnerId: 0, outcome: 'WIN' },    // challenger wins
-      { winnerId: 1, outcome: 'WIN' },    // defender wins
-      { winnerId: null, outcome: 'TIE' }, // tie
-      { winnerId: 0, outcome: 'WIN' },    // challenger wins
-      { winnerId: 1, outcome: 'WIN' },    // defender wins
-    ]);
+    mockRun.mockReturnValueOnce(simRounds(40, 40, 20));
 
     const result = runBattle('C', 'D');
 
-    expect(result.challengerWins).toBe(2);
-    expect(result.defenderWins).toBe(2);
-    expect(result.ties).toBe(1);
+    expect(result.challengerWins).toBe(40);
+    expect(result.defenderWins).toBe(40);
+    expect(result.ties).toBe(20);
     expect(result.overallResult).toBe('tie');
-    expect(result.rounds).toEqual([
-      { round: 1, winner: 'challenger', seed: expect.any(Number) },
-      { round: 2, winner: 'defender', seed: expect.any(Number) },
-      { round: 3, winner: 'tie', seed: expect.any(Number) },
-      { round: 4, winner: 'challenger', seed: expect.any(Number) },
-      { round: 5, winner: 'defender', seed: expect.any(Number) },
-    ]);
+    expect(result.rounds).toHaveLength(100);
+    // Verify round numbering
+    expect(result.rounds[0].round).toBe(1);
+    expect(result.rounds[99].round).toBe(100);
+    // First 40 are challenger wins, next 40 defender wins, last 20 ties
+    expect(result.rounds[0].winner).toBe('challenger');
+    expect(result.rounds[40].winner).toBe('defender');
+    expect(result.rounds[80].winner).toBe('tie');
   });
 });
