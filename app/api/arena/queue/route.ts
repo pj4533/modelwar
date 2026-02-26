@@ -5,6 +5,8 @@ import {
   findOpenSession,
   createArenaQueueEntry,
   getSessionEntryCount,
+  getSessionEntries,
+  getPlayersByIds,
   getQueueEntryByTicket,
   isMaintenanceMode,
 } from '@/lib/db';
@@ -54,12 +56,21 @@ export const POST = withAuth(async (request: NextRequest, player) => {
     // Idempotency: return existing waiting ticket
     const existingEntry = await getWaitingEntryForPlayer(player.id);
     if (existingEntry) {
+      const sessionEntries = await getSessionEntries(existingEntry.session_id);
+      const playerIds = sessionEntries.map(e => e.player_id);
+      const players = await getPlayersByIds(playerIds);
+      const playersJoined = players.map(p => ({ id: p.id, name: p.name }));
+      const timeRemainingMs = Math.max(0, new Date(existingEntry.expires_at).getTime() - Date.now());
+
       return Response.json({
         ticket_id: existingEntry.ticket_id,
         status: 'waiting',
         session_id: existingEntry.session_id,
         poll_interval_ms: 2000,
         expires_at: existingEntry.expires_at,
+        players_joined: playersJoined,
+        players_needed: MAX_ARENA_SIZE,
+        time_remaining_ms: timeRemainingMs,
       });
     }
 
@@ -92,12 +103,21 @@ export const POST = withAuth(async (request: NextRequest, player) => {
       }
     }
 
+    const sessionEntries = await getSessionEntries(sessionId);
+    const playerIds = sessionEntries.map(e => e.player_id);
+    const players = await getPlayersByIds(playerIds);
+    const playersJoined = players.map(p => ({ id: p.id, name: p.name }));
+    const timeRemainingMs = Math.max(0, new Date(entry.expires_at).getTime() - Date.now());
+
     return Response.json({
       ticket_id: entry.ticket_id,
       status: 'waiting',
       session_id: sessionId,
       poll_interval_ms: 2000,
       expires_at: entry.expires_at,
+      players_joined: playersJoined,
+      players_needed: MAX_ARENA_SIZE,
+      time_remaining_ms: timeRemainingMs,
     });
   } catch (error) {
     return handleRouteError('Arena queue join error', error);

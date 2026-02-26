@@ -16,6 +16,8 @@ import {
   findOpenSession,
   createArenaQueueEntry,
   getSessionEntryCount,
+  getSessionEntries,
+  getPlayersByIds,
   isMaintenanceMode,
 } from '@/lib/db';
 import { parseWarrior } from '@/lib/engine';
@@ -27,6 +29,8 @@ const mockGetWaiting = getWaitingEntryForPlayer as jest.MockedFunction<typeof ge
 const mockFindSession = findOpenSession as jest.MockedFunction<typeof findOpenSession>;
 const mockCreateEntry = createArenaQueueEntry as jest.MockedFunction<typeof createArenaQueueEntry>;
 const mockGetSessionCount = getSessionEntryCount as jest.MockedFunction<typeof getSessionEntryCount>;
+const mockGetSessionEntries = getSessionEntries as jest.MockedFunction<typeof getSessionEntries>;
+const mockGetPlayersByIds = getPlayersByIds as jest.MockedFunction<typeof getPlayersByIds>;
 const mockParseWarrior = parseWarrior as jest.MockedFunction<typeof parseWarrior>;
 const mockTriggerBattle = triggerArenaBattle as jest.MockedFunction<typeof triggerArenaBattle>;
 
@@ -37,6 +41,10 @@ beforeEach(() => {
   mockAuth.mockResolvedValue(player);
   mockIsMaintenanceMode.mockResolvedValue(false);
   mockParseWarrior.mockReturnValue({ success: true, errors: [], instructionCount: 5 });
+  mockGetSessionEntries.mockResolvedValue([
+    { id: 'uuid-1', player_id: 1, ticket_id: 'ticket-1', session_id: 'session-1', status: 'waiting', redcode: 'MOV 0, 1', arena_id: null, results: null, joined_at: new Date(), expires_at: new Date(Date.now() + 60000), created_at: new Date() },
+  ]);
+  mockGetPlayersByIds.mockResolvedValue([makePlayer({ id: 1, name: 'test-warrior' })]);
 });
 
 function makeRequest(body: Record<string, unknown> = { warrior_code: 'MOV 0, 1' }) {
@@ -85,6 +93,9 @@ describe('POST /api/arena/queue', () => {
     const data = await res.json();
     expect(data.ticket_id).toBe('existing-ticket');
     expect(data.status).toBe('waiting');
+    expect(data.players_joined).toEqual([{ id: 1, name: 'test-warrior' }]);
+    expect(data.players_needed).toBe(10);
+    expect(typeof data.time_remaining_ms).toBe('number');
   });
 
   it('creates new entry and returns ticket', async () => {
@@ -105,6 +116,10 @@ describe('POST /api/arena/queue', () => {
     expect(data.ticket_id).toBe('new-ticket');
     expect(data.status).toBe('waiting');
     expect(data.poll_interval_ms).toBe(2000);
+    expect(data.players_joined).toEqual([{ id: 1, name: 'test-warrior' }]);
+    expect(data.players_needed).toBe(10);
+    expect(typeof data.time_remaining_ms).toBe('number');
+    expect(data.time_remaining_ms).toBeGreaterThan(0);
   });
 
   it('creates new session if none open', async () => {

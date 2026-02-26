@@ -10,19 +10,29 @@ jest.mock('@/lib/auth', () => ({
 }));
 
 import { authenticateRequest } from '@/lib/auth';
-import { getQueueEntryByTicket, getOldestSessionExpiry } from '@/lib/db';
+import { getQueueEntryByTicket, getOldestSessionExpiry, getSessionEntries, getPlayersByIds } from '@/lib/db';
 import { triggerArenaBattle } from '@/lib/arena-trigger';
 
 const mockAuth = authenticateRequest as jest.MockedFunction<typeof authenticateRequest>;
 const mockGetEntry = getQueueEntryByTicket as jest.MockedFunction<typeof getQueueEntryByTicket>;
 const mockGetOldestExpiry = getOldestSessionExpiry as jest.MockedFunction<typeof getOldestSessionExpiry>;
 const mockTriggerBattle = triggerArenaBattle as jest.MockedFunction<typeof triggerArenaBattle>;
+const mockGetSessionEntries = getSessionEntries as jest.MockedFunction<typeof getSessionEntries>;
+const mockGetPlayersByIds = getPlayersByIds as jest.MockedFunction<typeof getPlayersByIds>;
 
 const player = makePlayer({ id: 1 });
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockAuth.mockResolvedValue(player);
+  mockGetSessionEntries.mockResolvedValue([
+    { id: 'uuid-1', player_id: 1, ticket_id: 'ticket-abc', session_id: 'session-1', status: 'waiting', redcode: 'MOV 0, 1', arena_id: null, results: null, joined_at: new Date(), expires_at: new Date(Date.now() + 60000), created_at: new Date() },
+    { id: 'uuid-2', player_id: 2, ticket_id: 'ticket-def', session_id: 'session-1', status: 'waiting', redcode: 'ADD 1, 2', arena_id: null, results: null, joined_at: new Date(), expires_at: new Date(Date.now() + 60000), created_at: new Date() },
+  ]);
+  mockGetPlayersByIds.mockResolvedValue([
+    makePlayer({ id: 1, name: 'warrior-1' }),
+    makePlayer({ id: 2, name: 'warrior-2' }),
+  ]);
 });
 
 function makeRequest(ticketId: string) {
@@ -109,6 +119,13 @@ describe('GET /api/arena/queue/[ticketId]', () => {
     const data = await res.json();
     expect(data.status).toBe('waiting');
     expect(data.poll_interval_ms).toBe(2000);
+    expect(data.players_joined).toEqual([
+      { id: 1, name: 'warrior-1' },
+      { id: 2, name: 'warrior-2' },
+    ]);
+    expect(data.players_needed).toBe(10);
+    expect(typeof data.time_remaining_ms).toBe('number');
+    expect(data.time_remaining_ms).toBeGreaterThan(0);
   });
 
   it('triggers battle when session expired', async () => {
