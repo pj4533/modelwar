@@ -12,7 +12,9 @@ let warriorTasks: number[] = [];
 let roundEnded = false;
 let roundWinner: number | null = null; // slot index or null for tie
 let currentCycle = 0;
+let stepCount = 0;
 let maxCycles = 80000;
+let totalSteps = 0;
 let prescanMode = false;
 
 let storedSettings: {
@@ -94,11 +96,14 @@ function fastForwardRounds(sim: Simulator, count: number): void {
 }
 
 function runToCompletion() {
-  const remaining = maxCycles - currentCycle;
+  // Each step() call is one warrior turn. With N warriors,
+  // a full round is maxCycles * numWarriors total steps.
+  const remaining = totalSteps - stepCount;
   for (let i = 0; i < remaining && !roundEnded; i++) {
     simulator!.step();
-    currentCycle++;
+    stepCount++;
   }
+  currentCycle = Math.floor(stepCount / numWarriors);
 }
 
 self.onmessage = (e: MessageEvent) => {
@@ -109,6 +114,7 @@ self.onmessage = (e: MessageEvent) => {
       const { redcodes, seed, settings, roundIndex } = msg;
       numWarriors = redcodes.length;
       maxCycles = settings.maxCycles;
+      totalSteps = maxCycles * numWarriors;
 
       storedSettings = {
         coreSize: settings.coreSize,
@@ -135,19 +141,24 @@ self.onmessage = (e: MessageEvent) => {
       roundEnded = false;
       roundWinner = null;
       currentCycle = 0;
+      stepCount = 0;
 
       self.postMessage({ type: 'initialized' });
     } catch (err) {
       self.postMessage({ type: 'error', message: String(err) });
     }
   } else if (msg.type === 'step') {
+    // count = number of Core War cycles to advance
+    // Each cycle requires numWarriors step() calls
     const count = msg.count || 1;
+    const stepsToRun = count * numWarriors;
     pendingEvents = [];
 
-    for (let i = 0; i < count && !roundEnded; i++) {
+    for (let i = 0; i < stepsToRun && !roundEnded && stepCount < totalSteps; i++) {
       simulator!.step();
-      currentCycle++;
+      stepCount++;
     }
+    currentCycle = Math.floor(stepCount / numWarriors);
 
     self.postMessage({
       type: 'events',
@@ -156,7 +167,7 @@ self.onmessage = (e: MessageEvent) => {
       warriorTasks: [...warriorTasks],
     });
 
-    if (roundEnded) {
+    if (roundEnded || stepCount >= totalSteps) {
       self.postMessage({
         type: 'round_end',
         winner: roundWinner,
@@ -175,7 +186,7 @@ self.onmessage = (e: MessageEvent) => {
       warriorTasks: [...warriorTasks],
     });
 
-    if (roundEnded || currentCycle >= maxCycles) {
+    if (roundEnded || stepCount >= totalSteps) {
       self.postMessage({
         type: 'round_end',
         winner: roundWinner,
@@ -205,6 +216,7 @@ self.onmessage = (e: MessageEvent) => {
     roundEnded = false;
     roundWinner = null;
     currentCycle = 0;
+    stepCount = 0;
 
     self.postMessage({ type: 'prescan_done', endCycle });
   }
