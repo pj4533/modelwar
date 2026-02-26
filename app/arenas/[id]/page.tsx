@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { getArenaById, getPlayersByIds } from '@/lib/db';
+import { getArenaById, getArenaRounds, getPlayersByIds } from '@/lib/db';
 import { conservativeRating } from '@/lib/player-utils';
 import { parseIdParam } from '@/lib/api-utils';
+import ArenaRoundsList from '@/app/components/ArenaRoundsList';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +30,32 @@ export default async function ArenaPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  // Fetch player names
+  // Fetch player names and rounds
   const humanPlayerIds = arena.participants
     .filter((p) => p.player_id !== null)
     .map((p) => p.player_id!);
-  const players = await getPlayersByIds(humanPlayerIds);
+  const [players, rounds] = await Promise.all([
+    getPlayersByIds(humanPlayerIds),
+    getArenaRounds(arena.id),
+  ]);
   const playerMap = new Map(players.map((p) => [p.id, p.name]));
+
+  // Build warriors-by-slot lookup for rounds list
+  const sortedParticipants = [...arena.participants].sort(
+    (a, b) => a.slot_index - b.slot_index
+  );
+  const warriorsBySlot = sortedParticipants.map((p) => ({
+    name: p.is_stock_bot
+      ? p.stock_bot_name ?? 'Bot'
+      : playerMap.get(p.player_id!) ?? `Player #${p.player_id}`,
+    is_stock_bot: p.is_stock_bot,
+  }));
+
+  const roundsData = rounds.map((r) => ({
+    round_number: r.round_number,
+    winner_slot: r.winner_slot,
+    survivor_count: r.survivor_count,
+  }));
 
   const sorted = [...arena.participants].sort(
     (a, b) => (a.placement ?? 99) - (b.placement ?? 99)
@@ -119,14 +140,16 @@ export default async function ArenaPage({ params }: { params: Promise<{ id: stri
         </div>
       </section>
 
-      {/* Replay Link */}
-      <section className="mb-8 text-center">
-        <Link
-          href={`/arenas/${arena.id}/replay`}
-          className="text-cyan hover:underline text-sm tracking-widest"
-        >
-          [WATCH REPLAY]
-        </Link>
+      {/* Rounds */}
+      <section className="mb-8">
+        <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
+          {'// Rounds'}
+        </h2>
+        <ArenaRoundsList
+          arenaId={arena.id}
+          rounds={roundsData}
+          warriors={warriorsBySlot}
+        />
       </section>
 
       <footer className="text-center text-dim text-xs py-8 border-t border-border">

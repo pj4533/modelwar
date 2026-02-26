@@ -14,6 +14,8 @@ interface ArenaPlaybackControlsProps {
   onStepForward: () => void;
   onJumpToEnd: () => void;
   arenaId: number;
+  roundNumber?: number;
+  totalRounds?: number;
 }
 
 export default function ArenaPlaybackControls({
@@ -24,6 +26,8 @@ export default function ArenaPlaybackControls({
   onStepForward,
   onJumpToEnd,
   arenaId,
+  roundNumber,
+  totalRounds,
 }: ArenaPlaybackControlsProps) {
   const isPlaying = state.status === 'playing';
   const canInteract = state.status === 'ready' || state.status === 'playing' || state.status === 'paused';
@@ -131,12 +135,34 @@ export default function ArenaPlaybackControls({
               ? `${warriors[state.winner]?.name ?? 'Unknown'} WINS`
               : 'TIE'}
           </p>
-          <Link
-            href={`/arenas/${arenaId}`}
-            className="text-cyan text-xs hover:underline tracking-wider"
-          >
-            BACK TO ARENA
-          </Link>
+          <div className="flex items-center gap-3">
+            {roundNumber !== undefined && totalRounds !== undefined && (
+              <>
+                {roundNumber > 1 && (
+                  <Link
+                    href={`/arenas/${arenaId}/rounds/${roundNumber - 1}`}
+                    className="text-cyan text-xs hover:underline tracking-wider"
+                  >
+                    &lsaquo; PREV
+                  </Link>
+                )}
+                {roundNumber < totalRounds && (
+                  <Link
+                    href={`/arenas/${arenaId}/rounds/${roundNumber + 1}`}
+                    className="text-cyan text-xs hover:underline tracking-wider"
+                  >
+                    NEXT &rsaquo;
+                  </Link>
+                )}
+              </>
+            )}
+            <Link
+              href={`/arenas/${arenaId}`}
+              className="text-cyan text-xs hover:underline tracking-wider"
+            >
+              BACK TO ARENA
+            </Link>
+          </div>
         </div>
       )}
     </div>

@@ -209,4 +209,42 @@ describe('startArena', () => {
     expect(mockUpdatePlayerArenaRating).toHaveBeenCalledWith(2, 1200, 340, 0.06, 'tie', expect.anything());
     expect(mockUpdatePlayerArenaRating).toHaveBeenCalledWith(3, 1150, 340, 0.06, 'loss', expect.anything());
   });
+
+  it('records tie (not win) when multiple players share placement 1', async () => {
+    const players = [
+      makePlayer({ id: 1, name: 'P1' }),
+      makePlayer({ id: 2, name: 'P2' }),
+      makePlayer({ id: 3, name: 'P3' }),
+    ];
+    mockGetAutoJoinPlayers.mockResolvedValue([
+      { player_id: 2, name: 'AW2', redcode: 'MOV 0, 1', arena_rating: 1200, arena_rd: 350, arena_volatility: 0.06 },
+      { player_id: 3, name: 'AW3', redcode: 'MOV 0, 1', arena_rating: 1200, arena_rd: 350, arena_volatility: 0.06 },
+    ]);
+    mockGetStockBots.mockReturnValue(
+      Array.from({ length: 7 }, (_, i) => ({
+        name: `[BOT] Bot${i}`,
+        author: 'Test',
+        redcode: 'MOV 0, 1',
+      }))
+    );
+    // All 10 warriors tie at placement 1
+    const arenaResult = makeArenaResult(10);
+    for (let i = 0; i < 10; i++) {
+      arenaResult.placements[i] = makePlacement(i, 500, 1);
+    }
+    mockRunArenaBattle.mockReturnValue(arenaResult);
+    mockGetPlayersByIds.mockResolvedValue(players);
+    mockCalculateArenaRatings.mockReturnValue(new Map([
+      [1, { rating: 1200, rd: 350, volatility: 0.06 }],
+      [2, { rating: 1200, rd: 350, volatility: 0.06 }],
+      [3, { rating: 1200, rd: 350, volatility: 0.06 }],
+    ]));
+
+    await startArena(1, 'MOV 0, 1');
+
+    // All humans should get 'tie', not 'win'
+    expect(mockUpdatePlayerArenaRating).toHaveBeenCalledWith(1, 1200, 350, 0.06, 'tie', expect.anything());
+    expect(mockUpdatePlayerArenaRating).toHaveBeenCalledWith(2, 1200, 350, 0.06, 'tie', expect.anything());
+    expect(mockUpdatePlayerArenaRating).toHaveBeenCalledWith(3, 1200, 350, 0.06, 'tie', expect.anything());
+  });
 });

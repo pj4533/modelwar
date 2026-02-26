@@ -44,6 +44,9 @@ const eventListener: SimulatorEventListener = {
   },
   onTaskCount(counts) {
     if (prescanMode) return;
+    // Zero all first — pmars-ts only reports alive warriors,
+    // so dead warriors must be explicitly zeroed out
+    warriorTasks.fill(0);
     for (const item of counts) {
       if (item.warriorId >= 0 && item.warriorId < numWarriors) {
         warriorTasks[item.warriorId] = item.taskCount;

@@ -190,9 +190,14 @@ export async function startArena(
       const placement = placementMap.get(pd.slotIndex);
 
       const p = placement?.placement ?? MAX_ARENA_SIZE;
+      const firstPlaceCount = arenaResult.placements.filter(
+        (pl) => pl.placement === 1
+      ).length;
       let resultType: 'win' | 'loss' | 'tie';
-      if (p === 1) {
+      if (p === 1 && firstPlaceCount === 1) {
         resultType = 'win';
+      } else if (p === 1 && firstPlaceCount > 1) {
+        resultType = 'tie';
       } else if (p === MAX_ARENA_SIZE || p === participantData.length) {
         resultType = 'loss';
       } else {

@@ -88,6 +88,9 @@ export function runArenaBattle(
   let lastTaskCounts: number[] = new Array(W).fill(0);
   sim.setEventListener({
     onTaskCount: (counts: TaskCountEvent[]) => {
+      // Zero all first — pmars-ts only reports alive warriors,
+      // so dead warriors must be explicitly zeroed out
+      lastTaskCounts.fill(0);
       for (const tc of counts) {
         if (tc.warriorId >= 0 && tc.warriorId < W) {
           lastTaskCounts[tc.warriorId] = tc.taskCount;

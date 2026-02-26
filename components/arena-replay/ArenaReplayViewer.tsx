@@ -14,9 +14,10 @@ const MAX_FRAME_SKIP = 10;
 interface ArenaReplayViewerProps {
   arenaId: number;
   roundNumber: number;
+  totalRounds?: number;
 }
 
-export default function ArenaReplayViewer({ arenaId, roundNumber }: ArenaReplayViewerProps) {
+export default function ArenaReplayViewer({ arenaId, roundNumber, totalRounds }: ArenaReplayViewerProps) {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
   const [replayData, setReplayData] = useState<ArenaReplayData | null>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -206,6 +207,8 @@ export default function ArenaReplayViewer({ arenaId, roundNumber }: ArenaReplayV
           onStepForward={handleStepForward}
           onJumpToEnd={handleJumpToEnd}
           arenaId={arenaId}
+          roundNumber={roundNumber}
+          totalRounds={totalRounds}
         />
       </div>
     </div>
