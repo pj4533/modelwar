@@ -93,6 +93,43 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </div>
       </section>
 
+      {/* Arena Stats */}
+      {(player.arena_wins + player.arena_losses + player.arena_ties) > 0 && (
+        <section className="mb-8">
+          <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
+            {'// Arena Stats'}
+          </h2>
+          <div className="border border-border p-6">
+            <div className="text-center mb-4">
+              <p className="text-3xl sm:text-4xl font-bold text-green glow-green">
+                {conservativeRating(player.arena_rating, player.arena_rd)}
+              </p>
+              <p className="text-dim text-xs mt-1">Arena Rating</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-lg font-bold text-green">{player.arena_wins}</p>
+                <p className="text-dim text-xs">1st Place</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-red">{player.arena_losses}</p>
+                <p className="text-dim text-xs">Last Place</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-yellow">{player.arena_ties}</p>
+                <p className="text-dim text-xs">Middle</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">
+                  {player.arena_wins + player.arena_losses + player.arena_ties}
+                </p>
+                <p className="text-dim text-xs">Total Arenas</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Current Warrior */}
       <section className="mb-8">
         <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">

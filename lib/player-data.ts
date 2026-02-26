@@ -16,6 +16,12 @@ export interface PlayerData {
     wins: number;
     losses: number;
     ties: number;
+    arena_rating: number;
+    arena_rd: number;
+    arena_volatility: number;
+    arena_wins: number;
+    arena_losses: number;
+    arena_ties: number;
     created_at: Date;
   } | null;
   warrior: {
