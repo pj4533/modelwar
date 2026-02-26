@@ -672,6 +672,215 @@ export async function updatePlayerArenaRating(
   }
 }
 
+// Unified battle types and queries
+
+export interface UnifiedBattle1v1 {
+  type: '1v1';
+  id: number;
+  created_at: Date;
+  challenger_id: number;
+  defender_id: number;
+  result: string;
+  challenger_wins: number;
+  defender_wins: number;
+  ties: number;
+  challenger_elo_before: number;
+  challenger_elo_after: number;
+  defender_elo_before: number;
+  defender_elo_after: number;
+  challenger_rd_before: number | null;
+  challenger_rd_after: number | null;
+  defender_rd_before: number | null;
+  defender_rd_after: number | null;
+  // arena fields null
+  placement: null;
+  participant_count: null;
+  total_score: null;
+  arena_rating_before: null;
+  arena_rating_after: null;
+  arena_rd_before: null;
+  arena_rd_after: null;
+}
+
+export interface UnifiedBattleArena {
+  type: 'arena';
+  id: number;
+  created_at: Date;
+  placement: number;
+  participant_count: number;
+  total_score: number;
+  arena_rating_before: number | null;
+  arena_rating_after: number | null;
+  arena_rd_before: number | null;
+  arena_rd_after: number | null;
+  // 1v1 fields null
+  challenger_id: null;
+  defender_id: null;
+  result: null;
+  challenger_wins: null;
+  defender_wins: null;
+  ties: null;
+  challenger_elo_before: null;
+  challenger_elo_after: null;
+  defender_elo_before: null;
+  defender_elo_after: null;
+  challenger_rd_before: null;
+  challenger_rd_after: null;
+  defender_rd_before: null;
+  defender_rd_after: null;
+}
+
+export type UnifiedBattleEntry = UnifiedBattle1v1 | UnifiedBattleArena;
+
+export async function getUnifiedBattlesByPlayerId(
+  playerId: number,
+  limit = 20,
+  offset = 0
+): Promise<UnifiedBattleEntry[]> {
+  return query<UnifiedBattleEntry>(
+    `SELECT * FROM (
+      SELECT
+        '1v1' AS type,
+        b.id,
+        b.created_at,
+        b.challenger_id,
+        b.defender_id,
+        b.result,
+        b.challenger_wins,
+        b.defender_wins,
+        b.ties,
+        b.challenger_elo_before,
+        b.challenger_elo_after,
+        b.defender_elo_before,
+        b.defender_elo_after,
+        b.challenger_rd_before,
+        b.challenger_rd_after,
+        b.defender_rd_before,
+        b.defender_rd_after,
+        NULL::int AS placement,
+        NULL::int AS participant_count,
+        NULL::int AS total_score,
+        NULL::float8 AS arena_rating_before,
+        NULL::float8 AS arena_rating_after,
+        NULL::float8 AS arena_rd_before,
+        NULL::float8 AS arena_rd_after
+      FROM battles b
+      WHERE b.challenger_id = $1 OR b.defender_id = $1
+
+      UNION ALL
+
+      SELECT
+        'arena' AS type,
+        a.id,
+        a.created_at,
+        NULL AS challenger_id,
+        NULL AS defender_id,
+        NULL AS result,
+        NULL AS challenger_wins,
+        NULL AS defender_wins,
+        NULL AS ties,
+        NULL AS challenger_elo_before,
+        NULL AS challenger_elo_after,
+        NULL AS defender_elo_before,
+        NULL AS defender_elo_after,
+        NULL AS challenger_rd_before,
+        NULL AS challenger_rd_after,
+        NULL AS defender_rd_before,
+        NULL AS defender_rd_after,
+        ap.placement,
+        (SELECT COUNT(*) FROM arena_participants ap2 WHERE ap2.arena_id = a.id)::int AS participant_count,
+        ap.total_score,
+        ap.arena_rating_before,
+        ap.arena_rating_after,
+        ap.arena_rd_before,
+        ap.arena_rd_after
+      FROM arena_participants ap
+      INNER JOIN arenas a ON a.id = ap.arena_id
+      WHERE ap.player_id = $1
+    ) unified
+    ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3`,
+    [playerId, limit, offset]
+  );
+}
+
+export async function getUnifiedBattleCountByPlayerId(playerId: number): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT (
+      (SELECT COUNT(*) FROM battles WHERE challenger_id = $1 OR defender_id = $1) +
+      (SELECT COUNT(*) FROM arena_participants WHERE player_id = $1)
+    )::text AS count`,
+    [playerId]
+  );
+  return parseInt(rows[0].count, 10);
+}
+
+export async function getRecentUnifiedBattles(limit = 10): Promise<UnifiedBattleEntry[]> {
+  return query<UnifiedBattleEntry>(
+    `SELECT * FROM (
+      SELECT
+        '1v1' AS type,
+        b.id,
+        b.created_at,
+        b.challenger_id,
+        b.defender_id,
+        b.result,
+        b.challenger_wins,
+        b.defender_wins,
+        b.ties,
+        NULL::float8 AS challenger_elo_before,
+        NULL::float8 AS challenger_elo_after,
+        NULL::float8 AS defender_elo_before,
+        NULL::float8 AS defender_elo_after,
+        NULL::float8 AS challenger_rd_before,
+        NULL::float8 AS challenger_rd_after,
+        NULL::float8 AS defender_rd_before,
+        NULL::float8 AS defender_rd_after,
+        NULL::int AS placement,
+        NULL::int AS participant_count,
+        NULL::int AS total_score,
+        NULL::float8 AS arena_rating_before,
+        NULL::float8 AS arena_rating_after,
+        NULL::float8 AS arena_rd_before,
+        NULL::float8 AS arena_rd_after
+      FROM battles b
+
+      UNION ALL
+
+      SELECT
+        'arena' AS type,
+        a.id,
+        a.created_at,
+        NULL AS challenger_id,
+        NULL AS defender_id,
+        NULL AS result,
+        NULL AS challenger_wins,
+        NULL AS defender_wins,
+        NULL AS ties,
+        NULL AS challenger_elo_before,
+        NULL AS challenger_elo_after,
+        NULL AS defender_elo_before,
+        NULL AS defender_elo_after,
+        NULL AS challenger_rd_before,
+        NULL AS challenger_rd_after,
+        NULL AS defender_rd_before,
+        NULL AS defender_rd_after,
+        NULL AS placement,
+        (SELECT COUNT(*) FROM arena_participants ap2 WHERE ap2.arena_id = a.id)::int AS participant_count,
+        NULL AS total_score,
+        NULL AS arena_rating_before,
+        NULL AS arena_rating_after,
+        NULL AS arena_rd_before,
+        NULL AS arena_rd_after
+      FROM arenas a
+      WHERE a.status = 'completed'
+    ) unified
+    ORDER BY created_at DESC
+    LIMIT $1`,
+    [limit]
+  );
+}
+
 export async function getArenasByPlayerId(playerId: number, limit = 20, offset = 0): Promise<Arena[]> {
   return query<Arena>(
     `SELECT a.* FROM arenas a

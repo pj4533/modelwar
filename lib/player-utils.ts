@@ -1,4 +1,4 @@
-import type { Battle } from './db';
+import type { Battle, UnifiedBattleEntry } from './db';
 
 export const PROVISIONAL_RD_THRESHOLD = 200;
 
@@ -6,16 +6,21 @@ export function conservativeRating(elo: number, rd: number | null): number {
   return rd != null ? Math.round(elo - 2 * rd) : elo;
 }
 
-export function buildEloHistory(playerId: number, battles: Battle[]): number[] {
-  const chronological = [...battles].reverse();
+export function buildEloHistory(playerId: number, battles: (Battle | UnifiedBattleEntry)[]): number[] {
+  // Filter to 1v1 battles only (arena has separate rating track)
+  const oneVsOne = battles.filter(b => {
+    if ('type' in b) return b.type === '1v1';
+    return true; // plain Battle objects are always 1v1
+  });
+  const chronological = [...oneVsOne].reverse();
   const points: number[] = [];
   for (const b of chronological) {
     if (b.challenger_id === playerId) {
-      if (points.length === 0) points.push(conservativeRating(b.challenger_elo_before, b.challenger_rd_before));
-      points.push(conservativeRating(b.challenger_elo_after, b.challenger_rd_after));
+      if (points.length === 0) points.push(conservativeRating(b.challenger_elo_before!, b.challenger_rd_before!));
+      points.push(conservativeRating(b.challenger_elo_after!, b.challenger_rd_after!));
     } else {
-      if (points.length === 0) points.push(conservativeRating(b.defender_elo_before, b.defender_rd_before));
-      points.push(conservativeRating(b.defender_elo_after, b.defender_rd_after));
+      if (points.length === 0) points.push(conservativeRating(b.defender_elo_before!, b.defender_rd_before!));
+      points.push(conservativeRating(b.defender_elo_after!, b.defender_rd_after!));
     }
   }
   return points;
@@ -31,6 +36,12 @@ export function asciiSparkline(values: number[]): string {
     const idx = Math.round(((v - min) / range) * (blocks.length - 1));
     return blocks[idx];
   }).join('');
+}
+
+export function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 export function getPlayerResult(battleResult: string, isChallenger: boolean): 'win' | 'loss' | 'tie' {

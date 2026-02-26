@@ -1,20 +1,51 @@
 import { NextRequest } from 'next/server';
 import { GET } from '../route';
-import { makePlayer, makeBattle } from '@/lib/__tests__/fixtures';
+import { makePlayer } from '@/lib/__tests__/fixtures';
+import type { UnifiedBattle1v1 } from '@/lib/db';
 
 jest.mock('@/lib/db');
 
 import {
   getPlayerById,
-  getBattlesByPlayerId,
-  getBattleCountByPlayerId,
+  getUnifiedBattlesByPlayerId,
+  getUnifiedBattleCountByPlayerId,
   getPlayersByIds,
 } from '@/lib/db';
 
 const mockGetPlayer = getPlayerById as jest.MockedFunction<typeof getPlayerById>;
-const mockGetBattles = getBattlesByPlayerId as jest.MockedFunction<typeof getBattlesByPlayerId>;
-const mockGetCount = getBattleCountByPlayerId as jest.MockedFunction<typeof getBattleCountByPlayerId>;
+const mockGetBattles = getUnifiedBattlesByPlayerId as jest.MockedFunction<typeof getUnifiedBattlesByPlayerId>;
+const mockGetCount = getUnifiedBattleCountByPlayerId as jest.MockedFunction<typeof getUnifiedBattleCountByPlayerId>;
 const mockGetPlayersByIds = getPlayersByIds as jest.MockedFunction<typeof getPlayersByIds>;
+
+function makeUnified1v1(overrides: Partial<UnifiedBattle1v1> = {}): UnifiedBattle1v1 {
+  return {
+    type: '1v1',
+    id: 1,
+    created_at: new Date('2025-01-01'),
+    challenger_id: 1,
+    defender_id: 2,
+    result: 'challenger_win',
+    challenger_wins: 60,
+    defender_wins: 30,
+    ties: 10,
+    challenger_elo_before: 1200,
+    challenger_elo_after: 1216,
+    defender_elo_before: 1200,
+    defender_elo_after: 1184,
+    challenger_rd_before: null,
+    challenger_rd_after: null,
+    defender_rd_before: null,
+    defender_rd_after: null,
+    placement: null,
+    participant_count: null,
+    total_score: null,
+    arena_rating_before: null,
+    arena_rating_after: null,
+    arena_rd_before: null,
+    arena_rd_after: null,
+    ...overrides,
+  };
+}
 
 function createRequest(url: string) {
   return new NextRequest(new URL(url, 'http://localhost:3000'));
@@ -30,8 +61,8 @@ beforeEach(() => {
 describe('GET /api/players/[id]/battles', () => {
   it('returns paginated battles with correct pagination metadata', async () => {
     const battles = [
-      makeBattle({ id: 10, challenger_id: 1, defender_id: 2 }),
-      makeBattle({ id: 11, challenger_id: 2, defender_id: 1 }),
+      makeUnified1v1({ id: 10, challenger_id: 1, defender_id: 2 }),
+      makeUnified1v1({ id: 11, challenger_id: 2, defender_id: 1 }),
     ];
     mockGetPlayer.mockResolvedValue(player);
     mockGetBattles.mockResolvedValue(battles);
@@ -130,7 +161,7 @@ describe('GET /api/players/[id]/battles', () => {
   });
 
   it('formats battle data correctly', async () => {
-    const battle = makeBattle({
+    const battle = makeUnified1v1({
       id: 5,
       challenger_id: 1,
       defender_id: 2,
@@ -152,9 +183,83 @@ describe('GET /api/players/[id]/battles', () => {
 
     const b = data.battles[0];
     expect(b.id).toBe(5);
+    expect(b.type).toBe('1v1');
     expect(b.opponent).toEqual({ id: 2, name: 'Bob' });
     expect(b.result).toBe('win');
     expect(b.score).toBe('60-30-10');
     expect(b.rating_change).toBe(16);
+  });
+
+  it('formats arena battle data correctly', async () => {
+    const arenaEntry = {
+      type: 'arena' as const,
+      id: 7,
+      created_at: new Date('2025-01-01'),
+      placement: 2,
+      participant_count: 10,
+      total_score: 180,
+      arena_rating_before: 1200,
+      arena_rating_after: 1230,
+      arena_rd_before: 300,
+      arena_rd_after: 280,
+      challenger_id: null, defender_id: null, result: null,
+      challenger_wins: null, defender_wins: null, ties: null,
+      challenger_elo_before: null, challenger_elo_after: null,
+      defender_elo_before: null, defender_elo_after: null,
+      challenger_rd_before: null, challenger_rd_after: null,
+      defender_rd_before: null, defender_rd_after: null,
+    };
+    mockGetPlayer.mockResolvedValue(player);
+    mockGetBattles.mockResolvedValue([arenaEntry]);
+    mockGetCount.mockResolvedValue(1);
+    mockGetPlayersByIds.mockResolvedValue([]);
+
+    const req = createRequest('http://localhost:3000/api/players/1/battles');
+    const res = await GET(req, { params: Promise.resolve({ id: '1' }) });
+    const data = await res.json();
+
+    const b = data.battles[0];
+    expect(b.id).toBe(7);
+    expect(b.type).toBe('arena');
+    expect(b.href).toBe('/arenas/7');
+    expect(b.placement).toBe(2);
+    expect(b.participant_count).toBe(10);
+    expect(b.matchup).toBe('2nd / 10');
+    expect(b.result).toBe('tie');
+    expect(b.score).toBe('180');
+  });
+
+  it('maps arena placement 1 to win and last to loss', async () => {
+    const winEntry = {
+      type: 'arena' as const,
+      id: 8,
+      created_at: new Date('2025-01-01'),
+      placement: 1,
+      participant_count: 5,
+      total_score: 250,
+      arena_rating_before: 1200,
+      arena_rating_after: 1260,
+      arena_rd_before: 300,
+      arena_rd_after: 280,
+      challenger_id: null, defender_id: null, result: null,
+      challenger_wins: null, defender_wins: null, ties: null,
+      challenger_elo_before: null, challenger_elo_after: null,
+      defender_elo_before: null, defender_elo_after: null,
+      challenger_rd_before: null, challenger_rd_after: null,
+      defender_rd_before: null, defender_rd_after: null,
+    };
+    const lossEntry = { ...winEntry, id: 9, placement: 5 };
+
+    mockGetPlayer.mockResolvedValue(player);
+    mockGetBattles.mockResolvedValue([winEntry, lossEntry]);
+    mockGetCount.mockResolvedValue(2);
+    mockGetPlayersByIds.mockResolvedValue([]);
+
+    const req = createRequest('http://localhost:3000/api/players/1/battles');
+    const res = await GET(req, { params: Promise.resolve({ id: '1' }) });
+    const data = await res.json();
+
+    expect(data.battles[0].result).toBe('win');
+    expect(data.battles[1].result).toBe('loss');
   });
 });

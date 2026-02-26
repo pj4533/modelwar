@@ -1,5 +1,6 @@
-import { buildEloHistory, asciiSparkline, getPlayerResult } from '../player-utils';
+import { buildEloHistory, asciiSparkline, getPlayerResult, ordinal } from '../player-utils';
 import { makeBattle } from './fixtures';
+import type { UnifiedBattleArena } from '../db';
 
 describe('getPlayerResult', () => {
   it('returns win for challenger when challenger_win', () => {
@@ -171,6 +172,76 @@ describe('buildEloHistory', () => {
     // Battle 1 (null RD): raw 1200 -> 1216
     // Battle 2 (RD present): conservative 1216-2*320=576 -> 1248-2*300=648
     expect(buildEloHistory(1, battles)).toEqual([1200, 1216, 648]);
+  });
+});
+
+describe('ordinal', () => {
+  it('returns correct ordinals for 1-4', () => {
+    expect(ordinal(1)).toBe('1st');
+    expect(ordinal(2)).toBe('2nd');
+    expect(ordinal(3)).toBe('3rd');
+    expect(ordinal(4)).toBe('4th');
+  });
+
+  it('returns th for teens', () => {
+    expect(ordinal(11)).toBe('11th');
+    expect(ordinal(12)).toBe('12th');
+    expect(ordinal(13)).toBe('13th');
+  });
+
+  it('returns correct ordinals for 21-23', () => {
+    expect(ordinal(21)).toBe('21st');
+    expect(ordinal(22)).toBe('22nd');
+    expect(ordinal(23)).toBe('23rd');
+  });
+
+  it('returns th for larger numbers', () => {
+    expect(ordinal(10)).toBe('10th');
+    expect(ordinal(100)).toBe('100th');
+  });
+});
+
+describe('buildEloHistory with unified entries', () => {
+  it('skips arena entries in unified battle list', () => {
+    const arenaEntry: UnifiedBattleArena = {
+      type: 'arena',
+      id: 5,
+      created_at: new Date('2025-01-02'),
+      placement: 3,
+      participant_count: 10,
+      total_score: 150,
+      arena_rating_before: 1200,
+      arena_rating_after: 1210,
+      arena_rd_before: 300,
+      arena_rd_after: 290,
+      challenger_id: null,
+      defender_id: null,
+      result: null,
+      challenger_wins: null,
+      defender_wins: null,
+      ties: null,
+      challenger_elo_before: null,
+      challenger_elo_after: null,
+      defender_elo_before: null,
+      defender_elo_after: null,
+      challenger_rd_before: null,
+      challenger_rd_after: null,
+      defender_rd_before: null,
+      defender_rd_after: null,
+    };
+
+    const battle1v1 = makeBattle({
+      id: 1,
+      challenger_id: 1,
+      defender_id: 2,
+      challenger_elo_before: 1200,
+      challenger_elo_after: 1216,
+      created_at: new Date('2025-01-01'),
+    });
+
+    // Arena entry should be filtered out, only 1v1 used
+    const result = buildEloHistory(1, [arenaEntry, battle1v1]);
+    expect(result).toEqual([1200, 1216]);
   });
 });
 

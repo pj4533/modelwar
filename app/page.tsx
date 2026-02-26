@@ -2,11 +2,12 @@ import Link from 'next/link';
 import {
   getLeaderboard,
   getPlayerCount,
-  getRecentBattles as dbGetRecentBattles,
+  getRecentUnifiedBattles,
   getFeaturedBattles as dbGetFeaturedBattles,
   getPlayersByIds,
   getArenaLeaderboard,
 } from '@/lib/db';
+import type { UnifiedBattleEntry } from '@/lib/db';
 import { findDecisiveRound } from '@/lib/battle-utils';
 import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
@@ -25,14 +26,19 @@ interface LeaderboardEntry {
   ties: number;
 }
 
-interface BattleEntry {
+interface RecentEntry {
+  type: '1v1' | 'arena';
   id: number;
-  result: string;
-  challenger_id: number;
-  defender_id: number;
-  challenger_wins: number;
-  defender_wins: number;
-  ties: number;
+  // 1v1 fields
+  result?: string;
+  challenger_id?: number;
+  defender_id?: number;
+  challenger_wins?: number;
+  defender_wins?: number;
+  ties?: number;
+  // arena fields
+  participant_count?: number;
+  // common
   created_at: string;
 }
 
@@ -74,11 +80,16 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
   }
 }
 
-async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNames: PlayerMap }> {
+async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNames: PlayerMap }> {
   try {
-    const battles = await dbGetRecentBattles(10);
+    const entries: UnifiedBattleEntry[] = await getRecentUnifiedBattles(10);
 
-    const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
+    // Only collect player IDs from 1v1 entries
+    const playerIds = [...new Set(
+      entries
+        .filter(e => e.type === '1v1')
+        .flatMap(e => [e.challenger_id!, e.defender_id!])
+    )];
     const players = await getPlayersByIds(playerIds);
     const playerNames: PlayerMap = {};
     for (const p of players) {
@@ -86,16 +97,28 @@ async function fetchRecentBattles(): Promise<{ battles: BattleEntry[]; playerNam
     }
 
     return {
-      battles: battles.map(b => ({
-        id: b.id,
-        result: b.result,
-        challenger_id: b.challenger_id,
-        defender_id: b.defender_id,
-        challenger_wins: b.challenger_wins,
-        defender_wins: b.defender_wins,
-        ties: b.ties,
-        created_at: String(b.created_at),
-      })),
+      battles: entries.map(e => {
+        if (e.type === '1v1') {
+          return {
+            type: '1v1' as const,
+            id: e.id,
+            result: e.result!,
+            challenger_id: e.challenger_id!,
+            defender_id: e.defender_id!,
+            challenger_wins: e.challenger_wins!,
+            defender_wins: e.defender_wins!,
+            ties: e.ties!,
+            created_at: String(e.created_at),
+          };
+        } else {
+          return {
+            type: 'arena' as const,
+            id: e.id,
+            participant_count: e.participant_count!,
+            created_at: String(e.created_at),
+          };
+        }
+      }),
       playerNames,
     };
   } catch {
@@ -297,7 +320,7 @@ export default async function Home() {
   const recentContent = (
     <>
       <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-        {'// Recent Battles'}
+        {'// Recent Activity'}
       </h2>
       {battles.length === 0 ? (
         <div className="text-dim text-sm border border-border p-6 text-center">
@@ -309,6 +332,7 @@ export default async function Home() {
             <thead>
               <tr>
                 <th className="hidden sm:table-cell">ID</th>
+                <th className="hidden sm:table-cell">Type</th>
                 <th className="hidden sm:table-cell">When</th>
                 <th>Challenger</th>
                 <th className="text-center hidden sm:table-cell">vs</th>
@@ -319,26 +343,48 @@ export default async function Home() {
             </thead>
             <tbody>
               {battles.map((battle) => {
-                const r = resultLabel(battle.result);
-                return (
-                  <ClickableRow href={`/battles/${battle.id}`} key={battle.id}>
-                    <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
-                    <td className="text-dim hidden sm:table-cell text-xs">
-                      <LocalTimestamp date={battle.created_at} />
-                    </td>
-                    <td className={`${battle.result === 'challenger_win' ? 'text-green' : ''} player-name-truncate`}>
-                      {playerNames[battle.challenger_id] || `Player #${battle.challenger_id}`}
-                    </td>
-                    <td className="text-center text-dim hidden sm:table-cell">vs</td>
-                    <td className={`${battle.result === 'defender_win' ? 'text-green' : ''} player-name-truncate`}>
-                      {playerNames[battle.defender_id] || `Player #${battle.defender_id}`}
-                    </td>
-                    <td className="text-dim">
-                      {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
-                    </td>
-                    <td className={r.color}>{r.text}</td>
-                  </ClickableRow>
-                );
+                if (battle.type === '1v1') {
+                  const r = resultLabel(battle.result!);
+                  return (
+                    <ClickableRow href={`/battles/${battle.id}`} key={`1v1-${battle.id}`}>
+                      <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
+                      <td className="hidden sm:table-cell text-xs">1v1</td>
+                      <td className="text-dim hidden sm:table-cell text-xs">
+                        <LocalTimestamp date={battle.created_at} />
+                      </td>
+                      <td className={`${battle.result === 'challenger_win' ? 'text-green' : ''} player-name-truncate`}>
+                        {playerNames[battle.challenger_id!] || `Player #${battle.challenger_id}`}
+                      </td>
+                      <td className="text-center text-dim hidden sm:table-cell">vs</td>
+                      <td className={`${battle.result === 'defender_win' ? 'text-green' : ''} player-name-truncate`}>
+                        {playerNames[battle.defender_id!] || `Player #${battle.defender_id}`}
+                      </td>
+                      <td className="text-dim">
+                        {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
+                      </td>
+                      <td className={r.color}>{r.text}</td>
+                    </ClickableRow>
+                  );
+                } else {
+                  return (
+                    <ClickableRow href={`/arenas/${battle.id}`} key={`arena-${battle.id}`}>
+                      <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
+                      <td className="text-magenta hidden sm:table-cell text-xs">Arena</td>
+                      <td className="text-dim hidden sm:table-cell text-xs">
+                        <LocalTimestamp date={battle.created_at} />
+                      </td>
+                      <td className="text-cyan player-name-truncate">
+                        Arena #{battle.id}
+                      </td>
+                      <td className="text-center text-dim hidden sm:table-cell"></td>
+                      <td className="text-dim player-name-truncate">
+                        {battle.participant_count} players
+                      </td>
+                      <td className="text-dim">&mdash;</td>
+                      <td className="text-cyan">COMPLETED</td>
+                    </ClickableRow>
+                  );
+                }
               })}
             </tbody>
           </table>

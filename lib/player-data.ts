@@ -1,11 +1,11 @@
 import {
   getPlayerById,
   getWarriorByPlayerId,
-  getBattlesByPlayerId,
-  getBattleCountByPlayerId,
+  getUnifiedBattlesByPlayerId,
+  getUnifiedBattleCountByPlayerId,
   getPlayersByIds,
 } from '@/lib/db';
-import type { Battle } from '@/lib/db';
+import type { UnifiedBattleEntry } from '@/lib/db';
 
 export interface PlayerData {
   player: {
@@ -29,7 +29,7 @@ export interface PlayerData {
     redcode: string;
     updated_at: Date;
   } | null;
-  battles: Battle[];
+  battles: UnifiedBattleEntry[];
   battleCount: number;
   playerNames: Record<number, string>;
 }
@@ -40,12 +40,15 @@ export async function getPlayerData(id: number): Promise<PlayerData> {
 
   const [warrior, battles, battleCount] = await Promise.all([
     getWarriorByPlayerId(id),
-    getBattlesByPlayerId(id, 20),
-    getBattleCountByPlayerId(id),
+    getUnifiedBattlesByPlayerId(id, 20),
+    getUnifiedBattleCountByPlayerId(id),
   ]);
 
+  // Only collect opponent IDs from 1v1 entries
   const opponentIds = [...new Set(
-    battles.flatMap(b => [b.challenger_id, b.defender_id])
+    battles
+      .filter(b => b.type === '1v1')
+      .flatMap(b => [b.challenger_id!, b.defender_id!])
       .filter(pid => pid !== id)
   )];
   const opponents = await getPlayersByIds(opponentIds);

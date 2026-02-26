@@ -359,3 +359,75 @@ describe('Battle queries', () => {
     );
   });
 });
+
+describe('Unified battle queries', () => {
+  it('getUnifiedBattlesByPlayerId: returns unified entries with UNION ALL', async () => {
+    const entries = [
+      { type: '1v1', id: 1, created_at: new Date(), challenger_id: 1, defender_id: 2, result: 'challenger_win' },
+      { type: 'arena', id: 3, created_at: new Date(), placement: 2, participant_count: 10, total_score: 120 },
+    ];
+    mockQuery.mockResolvedValueOnce({ rows: entries });
+
+    const result = await db.getUnifiedBattlesByPlayerId(1, 20, 0);
+
+    expect(result).toEqual(entries);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UNION ALL'),
+      [1, 20, 0]
+    );
+  });
+
+  it('getUnifiedBattlesByPlayerId: uses default limit and offset', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getUnifiedBattlesByPlayerId(5);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UNION ALL'),
+      [5, 20, 0]
+    );
+  });
+
+  it('getUnifiedBattleCountByPlayerId: sums counts from both tables', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '15' }] });
+
+    const result = await db.getUnifiedBattleCountByPlayerId(1);
+
+    expect(result).toBe(15);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('battles'),
+      [1]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('arena_participants'),
+      [1]
+    );
+  });
+
+  it('getRecentUnifiedBattles: returns recent entries from both tables', async () => {
+    const entries = [
+      { type: '1v1', id: 1, created_at: new Date() },
+      { type: 'arena', id: 2, created_at: new Date() },
+    ];
+    mockQuery.mockResolvedValueOnce({ rows: entries });
+
+    const result = await db.getRecentUnifiedBattles(10);
+
+    expect(result).toEqual(entries);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UNION ALL'),
+      [10]
+    );
+  });
+
+  it('getRecentUnifiedBattles: uses default limit', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getRecentUnifiedBattles();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UNION ALL'),
+      [10]
+    );
+  });
+});
