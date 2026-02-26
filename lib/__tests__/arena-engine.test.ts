@@ -1,7 +1,7 @@
 jest.mock('pmars-ts');
 
 import { Simulator, Assembler } from 'pmars-ts';
-import { runArenaBattle, ARENA_NUM_ROUNDS, ARENA_MAX_WARRIORS } from '../arena-engine';
+import { runArenaBattle, ARENA_NUM_ROUNDS, ARENA_MAX_WARRIORS, MAX_WARRIOR_LENGTH } from '../arena-engine';
 
 const MockAssembler = Assembler as jest.MockedClass<typeof Assembler>;
 const mockAssemble = MockAssembler.prototype.assemble as jest.Mock;
@@ -201,6 +201,10 @@ describe('arena-engine', () => {
 
     it('ARENA_MAX_WARRIORS is 10', () => {
       expect(ARENA_MAX_WARRIORS).toBe(10);
+    });
+
+    it('MAX_WARRIOR_LENGTH is 100', () => {
+      expect(MAX_WARRIOR_LENGTH).toBe(100);
     });
   });
 });

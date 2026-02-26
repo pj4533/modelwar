@@ -182,6 +182,14 @@ describe('POST /api/arena/queue', () => {
     expect(data.status).toBe('waiting');
   });
 
+  it('returns 400 for warrior exceeding arena instruction limit', async () => {
+    mockParseWarrior.mockReturnValue({ success: true, errors: [], instructionCount: 101 });
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/exceeds arena limit of 100 instructions/);
+  });
+
   it('returns 400 for non-string warrior_code', async () => {
     const res = await POST(makeRequest({ warrior_code: 123 }));
     expect(res.status).toBe(400);

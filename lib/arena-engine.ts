@@ -6,7 +6,7 @@ const CORE_SIZE = 8000;
 const MAX_CYCLES = 80000;
 const MAX_TASKS = 8000;
 const MIN_SEPARATION = 100;
-const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
+const MAX_WARRIOR_LENGTH = 100;
 
 // Arena-specific constants
 export const ARENA_NUM_ROUNDS = 200;

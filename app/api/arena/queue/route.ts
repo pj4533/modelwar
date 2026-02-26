@@ -13,6 +13,7 @@ import {
 import { parseWarrior } from '@/lib/engine';
 import { triggerArenaBattle } from '@/lib/arena-trigger';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
+import { MAX_WARRIOR_LENGTH } from '@/lib/arena-engine';
 
 const MAX_ARENA_SIZE = 10;
 
@@ -49,6 +50,13 @@ export const POST = withAuth(async (request: NextRequest, player) => {
     if (!parseResult.success) {
       return Response.json(
         { error: 'Invalid warrior code', details: parseResult.errors },
+        { status: 400 }
+      );
+    }
+
+    if (parseResult.instructionCount > MAX_WARRIOR_LENGTH) {
+      return Response.json(
+        { error: `Warrior exceeds arena limit of ${MAX_WARRIOR_LENGTH} instructions (has ${parseResult.instructionCount})` },
         { status: 400 }
       );
     }
