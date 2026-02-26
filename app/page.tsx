@@ -3,6 +3,7 @@ import {
   getLeaderboard,
   getPlayerCount,
   getRecentUnifiedBattles,
+  getRecentUnifiedBattleCount,
   getFeaturedBattles as dbGetFeaturedBattles,
   getPlayersByIds,
   getArenaLeaderboard,
@@ -11,9 +12,9 @@ import type { UnifiedBattleEntry } from '@/lib/db';
 import { findDecisiveRound } from '@/lib/battle-utils';
 import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
-import LocalTimestamp from '@/app/components/LocalTimestamp';
 import HeroReplay from '@/components/HeroReplay';
 import HomeTabs from '@/components/HomeTabs';
+import PaginatedRecentActivity from '@/app/components/PaginatedRecentActivity';
 
 interface LeaderboardEntry {
   rank: number;
@@ -80,9 +81,12 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
   }
 }
 
-async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNames: PlayerMap }> {
+async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNames: PlayerMap; totalBattles: number }> {
   try {
-    const entries: UnifiedBattleEntry[] = await getRecentUnifiedBattles(10);
+    const [entries, totalBattles]: [UnifiedBattleEntry[], number] = await Promise.all([
+      getRecentUnifiedBattles(20),
+      getRecentUnifiedBattleCount(),
+    ]);
 
     // Only collect player IDs from 1v1 entries
     const playerIds = [...new Set(
@@ -120,9 +124,10 @@ async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNam
         }
       }),
       playerNames,
+      totalBattles,
     };
   } catch {
-    return { battles: [], playerNames: {} };
+    return { battles: [], playerNames: {}, totalBattles: 0 };
   }
 }
 
@@ -201,7 +206,7 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const [
     { entries: leaderboard, totalPlayers },
-    { battles, playerNames },
+    { battles, playerNames, totalBattles },
     { heroBattle, featuredBattles },
     { entries: arenaLeaderboard },
   ] = await Promise.all([
@@ -318,79 +323,12 @@ export default async function Home() {
   );
 
   const recentContent = (
-    <>
-      <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-        {'// Recent Activity'}
-      </h2>
-      {battles.length === 0 ? (
-        <div className="text-dim text-sm border border-border p-6 text-center">
-          No battles fought yet. Upload a warrior and issue a challenge!
-        </div>
-      ) : (
-        <div className="border border-border overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th className="hidden sm:table-cell">ID</th>
-                <th className="hidden sm:table-cell">Type</th>
-                <th className="hidden sm:table-cell">When</th>
-                <th>Challenger</th>
-                <th className="text-center hidden sm:table-cell">vs</th>
-                <th>Defender</th>
-                <th>Score</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {battles.map((battle) => {
-                if (battle.type === '1v1') {
-                  const r = resultLabel(battle.result!);
-                  return (
-                    <ClickableRow href={`/battles/${battle.id}`} key={`1v1-${battle.id}`}>
-                      <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
-                      <td className="hidden sm:table-cell text-xs">1v1</td>
-                      <td className="text-dim hidden sm:table-cell text-xs">
-                        <LocalTimestamp date={battle.created_at} />
-                      </td>
-                      <td className={`${battle.result === 'challenger_win' ? 'text-green' : ''} player-name-truncate`}>
-                        {playerNames[battle.challenger_id!] || `Player #${battle.challenger_id}`}
-                      </td>
-                      <td className="text-center text-dim hidden sm:table-cell">vs</td>
-                      <td className={`${battle.result === 'defender_win' ? 'text-green' : ''} player-name-truncate`}>
-                        {playerNames[battle.defender_id!] || `Player #${battle.defender_id}`}
-                      </td>
-                      <td className="text-dim">
-                        {battle.challenger_wins}-{battle.defender_wins}-{battle.ties}
-                      </td>
-                      <td className={r.color}>{r.text}</td>
-                    </ClickableRow>
-                  );
-                } else {
-                  return (
-                    <ClickableRow href={`/arenas/${battle.id}`} key={`arena-${battle.id}`}>
-                      <td className="text-cyan hidden sm:table-cell">#{battle.id}</td>
-                      <td className="text-magenta hidden sm:table-cell text-xs">Arena</td>
-                      <td className="text-dim hidden sm:table-cell text-xs">
-                        <LocalTimestamp date={battle.created_at} />
-                      </td>
-                      <td className="text-cyan player-name-truncate">
-                        Arena #{battle.id}
-                      </td>
-                      <td className="text-center text-dim hidden sm:table-cell"></td>
-                      <td className="text-dim player-name-truncate">
-                        {battle.participant_count} players
-                      </td>
-                      <td className="text-dim">&mdash;</td>
-                      <td className="text-cyan">COMPLETED</td>
-                    </ClickableRow>
-                  );
-                }
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+    <PaginatedRecentActivity
+      initialBattles={battles}
+      initialPlayerNames={playerNames}
+      totalBattles={totalBattles}
+      perPage={20}
+    />
   );
 
   const arenaContent = (

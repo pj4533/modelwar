@@ -815,7 +815,7 @@ export async function getUnifiedBattleCountByPlayerId(playerId: number): Promise
   return parseInt(rows[0].count, 10);
 }
 
-export async function getRecentUnifiedBattles(limit = 10): Promise<UnifiedBattleEntry[]> {
+export async function getRecentUnifiedBattles(limit = 10, offset = 0): Promise<UnifiedBattleEntry[]> {
   return query<UnifiedBattleEntry>(
     `SELECT * FROM (
       SELECT
@@ -876,9 +876,19 @@ export async function getRecentUnifiedBattles(limit = 10): Promise<UnifiedBattle
       WHERE a.status = 'completed'
     ) unified
     ORDER BY created_at DESC
-    LIMIT $1`,
-    [limit]
+    LIMIT $1 OFFSET $2`,
+    [limit, offset]
   );
+}
+
+export async function getRecentUnifiedBattleCount(): Promise<number> {
+  const rows = await query<{ count: string }>(
+    `SELECT (
+      (SELECT COUNT(*) FROM battles) +
+      (SELECT COUNT(*) FROM arenas WHERE status = 'completed')
+    )::text AS count`
+  );
+  return parseInt(rows[0].count, 10);
 }
 
 export async function getArenasByPlayerId(playerId: number, limit = 20, offset = 0): Promise<Arena[]> {

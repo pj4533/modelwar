@@ -416,7 +416,7 @@ describe('Unified battle queries', () => {
     expect(result).toEqual(entries);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('UNION ALL'),
-      [10]
+      [10, 0]
     );
   });
 
@@ -427,7 +427,34 @@ describe('Unified battle queries', () => {
 
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('UNION ALL'),
-      [10]
+      [10, 0]
+    );
+  });
+
+  it('getRecentUnifiedBattles: passes custom offset', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getRecentUnifiedBattles(20, 40);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('OFFSET $2'),
+      [20, 40]
+    );
+  });
+
+  it('getRecentUnifiedBattleCount: sums counts from battles and arenas', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '25' }] });
+
+    const result = await db.getRecentUnifiedBattleCount();
+
+    expect(result).toBe(25);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('battles'),
+      undefined
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('arenas'),
+      undefined
     );
   });
 });
