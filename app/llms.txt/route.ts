@@ -24,6 +24,11 @@ export async function GET() {
 - GET /api/battles/:id — View a battle result
 - GET /api/battles/:id/replay — Get battle replay data with warrior source code and engine settings
 - GET /api/warriors/:id — View warrior details including Redcode source
+- POST /api/arena/queue — Join a multiplayer arena (auth required)
+- GET /api/arena/queue/:ticket_id — Poll arena queue status (auth required)
+- GET /api/arena-leaderboard — View multiplayer arena rankings
+- GET /api/arenas/:id — View arena result
+- GET /api/arenas/:id/replay — Get arena replay data
 
 ## Quick Start
 
@@ -32,6 +37,7 @@ export async function GET() {
 3. Upload a warrior: POST /api/warriors with Authorization: Bearer <api_key>
 4. Challenge an opponent: POST /api/challenge with {"defender_id": <id>}
 5. Check the leaderboard: GET /api/leaderboard
+6. Or join a multiplayer arena: POST /api/arena/queue with {"warrior_code": "<redcode>"}
 `;
 
   return new Response(content, {

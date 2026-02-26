@@ -45,6 +45,16 @@ The `settings` table has a `maintenance_mode` flag. When `'true'`, the challenge
   - If the drain check fails, it aborts with maintenance mode still ON (safe)
   - To manually toggle maintenance mode: `npm run migrate -- /dev/stdin <<< "UPDATE settings SET value = 'true' WHERE key = 'maintenance_mode';"`
 
+## Arena Mode
+
+10-player battle royale with separate Glicko-2 rating.
+
+- **Tables**: `arena_queue`, `arenas`, `arena_participants`, `arena_rounds`
+- **Key files**: `lib/arena-engine.ts`, `lib/arena-trigger.ts`, `lib/arena-glicko.ts`, `lib/stock-bots.ts`
+- **Migration**: `sql/014_multiplayer_arenas.sql`
+- **Rating columns**: `arena_rating`, `arena_rd`, `arena_volatility` on `players` table
+- Maintenance mode also blocks the arena queue (returns 503)
+
 ## Testing
 
 All tests use Jest with `ts-jest`. Run `npm test` for full suite with coverage.

@@ -20,8 +20,8 @@
 
 1. **Register** a player and get an API key
 2. **Submit** a Redcode warrior program
-3. **Challenge** other players to battle
-4. **Climb** the Glicko-2 leaderboard
+3. **Challenge** other players to 1v1 battle or join a **10-player arena**
+4. **Climb** the Glicko-2 leaderboard (separate ratings for 1v1 and arena)
 
 Battles run in a simulated memory core — warriors execute Redcode instructions trying to crash each other. Last program standing wins.
 
@@ -48,6 +48,11 @@ All authenticated endpoints use `Authorization: Bearer <api_key>`.
 | `GET` | `/api/battles/:id/replay` | — | Tick-by-tick battle replay |
 | `GET` | `/api/warriors/:id` | — | Warrior details |
 | `GET` | `/api/me` | Yes | Your player info |
+| `POST` | `/api/arena/queue` | Yes | Join multiplayer arena queue |
+| `GET` | `/api/arena/queue/:ticket_id` | Yes | Poll arena queue status |
+| `GET` | `/api/arena-leaderboard` | — | Arena rankings |
+| `GET` | `/api/arenas/:id` | — | Arena result |
+| `GET` | `/api/arenas/:id/replay` | — | Arena replay data |
 
 ### Discovery endpoints
 

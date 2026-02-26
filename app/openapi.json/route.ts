@@ -529,6 +529,250 @@ const spec = {
         },
       },
     },
+    '/api/arena/queue': {
+      post: {
+        summary: 'Join the multiplayer arena queue',
+        operationId: 'joinArenaQueue',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['warrior_code'],
+                properties: {
+                  warrior_code: { type: 'string', description: 'Redcode warrior source code' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Joined queue (waiting or completed immediately)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ticket_id: { type: 'string', format: 'uuid' },
+                    status: { type: 'string', enum: ['waiting', 'completed'] },
+                    session_id: { type: 'string', format: 'uuid' },
+                    poll_interval_ms: { type: 'integer' },
+                    expires_at: { type: 'string', format: 'date-time' },
+                    players_joined: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                        },
+                      },
+                    },
+                    players_needed: { type: 'integer' },
+                    time_remaining_ms: { type: 'integer' },
+                    arena_id: { type: 'integer', nullable: true, description: 'Present when status is completed' },
+                    results: { type: 'object', nullable: true, description: 'Present when status is completed' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid warrior code', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '503': { description: 'Maintenance mode', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/arena/queue/{ticketId}': {
+      get: {
+        summary: 'Poll arena queue status',
+        operationId: 'pollArenaQueue',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'ticketId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Queue status (waiting, completed, or expired)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ticket_id: { type: 'string', format: 'uuid' },
+                    status: { type: 'string', enum: ['waiting', 'completed', 'expired'] },
+                    session_id: { type: 'string', format: 'uuid', nullable: true },
+                    poll_interval_ms: { type: 'integer', nullable: true },
+                    expires_at: { type: 'string', format: 'date-time', nullable: true },
+                    players_joined: { type: 'array', nullable: true, items: { type: 'object', properties: { id: { type: 'integer' }, name: { type: 'string' } } } },
+                    players_needed: { type: 'integer', nullable: true },
+                    time_remaining_ms: { type: 'integer', nullable: true },
+                    arena_id: { type: 'integer', nullable: true },
+                    results: { type: 'object', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Ticket not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/arena-leaderboard': {
+      get: {
+        summary: 'Get the arena leaderboard',
+        operationId: 'getArenaLeaderboard',
+        responses: {
+          '200': {
+            description: 'Top arena players ranked by arena rating',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    leaderboard: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          rank: { type: 'integer' },
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          rating: { type: 'number' },
+                          arena_wins: { type: 'integer' },
+                          arena_losses: { type: 'integer' },
+                          arena_ties: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/arenas/{id}': {
+      get: {
+        summary: 'Get an arena result',
+        operationId: 'getArena',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Arena details with participants and placements',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    session_id: { type: 'string', format: 'uuid' },
+                    seed: { type: 'integer' },
+                    total_rounds: { type: 'integer' },
+                    status: { type: 'string' },
+                    participants: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          slot_index: { type: 'integer' },
+                          player_id: { type: 'integer', nullable: true },
+                          name: { type: 'string' },
+                          is_stock_bot: { type: 'boolean' },
+                          placement: { type: 'integer' },
+                          total_score: { type: 'integer' },
+                          rating_before: { type: 'number', nullable: true },
+                          rating_after: { type: 'number', nullable: true },
+                          rating_change: { type: 'number', nullable: true },
+                        },
+                      },
+                    },
+                    started_at: { type: 'string', format: 'date-time' },
+                    completed_at: { type: 'string', format: 'date-time', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid arena ID', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Arena not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/api/arenas/{id}/replay': {
+      get: {
+        summary: 'Get arena replay data',
+        operationId: 'getArenaReplay',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Replay data with warriors, rounds, and settings',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    arena_id: { type: 'integer' },
+                    seed: { type: 'integer' },
+                    total_rounds: { type: 'integer' },
+                    warriors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          slot_index: { type: 'integer' },
+                          name: { type: 'string' },
+                          redcode: { type: 'string' },
+                          is_stock_bot: { type: 'boolean' },
+                        },
+                      },
+                    },
+                    rounds: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          round_number: { type: 'integer' },
+                          seed: { type: 'integer' },
+                          survivor_count: { type: 'integer' },
+                          winner_slot: { type: 'integer', nullable: true },
+                          scores: { type: 'object' },
+                        },
+                      },
+                    },
+                    settings: {
+                      type: 'object',
+                      properties: {
+                        coreSize: { type: 'integer' },
+                        maxCycles: { type: 'integer' },
+                        maxLength: { type: 'integer' },
+                        maxProcesses: { type: 'integer' },
+                        minSeparation: { type: 'integer' },
+                        warriors: { type: 'integer' },
+                        rounds: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid arena ID', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '404': { description: 'Arena not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
     '/api/leaderboard': {
       get: {
         summary: 'Get the leaderboard',

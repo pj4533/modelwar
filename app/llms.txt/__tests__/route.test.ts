@@ -18,4 +18,14 @@ describe('GET /llms.txt', () => {
     expect(text).toContain('GET /api/battles/:id/replay');
     expect(text).toContain('GET /api/warriors/:id');
   });
+
+  it('lists arena API endpoints', async () => {
+    const res = await GET();
+    const text = await res.text();
+    expect(text).toContain('POST /api/arena/queue');
+    expect(text).toContain('GET /api/arena/queue/:ticket_id');
+    expect(text).toContain('GET /api/arena-leaderboard');
+    expect(text).toContain('GET /api/arenas/:id —');
+    expect(text).toContain('GET /api/arenas/:id/replay');
+  });
 });
