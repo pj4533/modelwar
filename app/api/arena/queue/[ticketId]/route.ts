@@ -4,14 +4,18 @@ import {
   getOldestSessionExpiry,
 } from '@/lib/db';
 import { triggerArenaBattle } from '@/lib/arena-trigger';
-import { withAuth, handleRouteError } from '@/lib/api-utils';
+import { authenticateRequest, unauthorizedResponse } from '@/lib/auth';
+import { handleRouteError } from '@/lib/api-utils';
 
-export const GET = withAuth(async (
+export async function GET(
   request: NextRequest,
-  player
-) => {
+  { params }: { params: Promise<{ ticketId: string }> }
+) {
   try {
-    const ticketId = request.nextUrl.pathname.split('/').pop()!;
+    const player = await authenticateRequest(request);
+    if (!player) return unauthorizedResponse();
+
+    const { ticketId } = await params;
 
     const entry = await getQueueEntryByTicket(ticketId);
     if (!entry) {
@@ -78,4 +82,4 @@ export const GET = withAuth(async (
   } catch (error) {
     return handleRouteError('Arena queue poll error', error);
   }
-});
+}

@@ -62,6 +62,8 @@ CREATE TABLE arena_queue (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX idx_arena_participants_player ON arena_participants(player_id) WHERE player_id IS NOT NULL;
+
 CREATE INDEX idx_arena_queue_session ON arena_queue(session_id) WHERE status = 'waiting';
 CREATE INDEX idx_arena_queue_ticket ON arena_queue(ticket_id);
 CREATE INDEX idx_arena_queue_player_waiting ON arena_queue(player_id) WHERE status = 'waiting';

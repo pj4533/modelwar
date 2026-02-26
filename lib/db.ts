@@ -485,21 +485,23 @@ export async function createArena(
   return rows[0];
 }
 
+export interface ArenaParticipantInput {
+  playerId: number | null;
+  slotIndex: number;
+  isStockBot: boolean;
+  stockBotName: string | null;
+  redcode: string;
+  placement: number;
+  totalScore: number;
+  arenaRatingBefore: number | null;
+  arenaRatingAfter: number | null;
+  arenaRdBefore: number | null;
+  arenaRdAfter: number | null;
+}
+
 export async function createArenaParticipant(
   arenaId: number,
-  participant: {
-    playerId: number | null;
-    slotIndex: number;
-    isStockBot: boolean;
-    stockBotName: string | null;
-    redcode: string;
-    placement: number;
-    totalScore: number;
-    arenaRatingBefore: number | null;
-    arenaRatingAfter: number | null;
-    arenaRdBefore: number | null;
-    arenaRdAfter: number | null;
-  },
+  participant: ArenaParticipantInput,
   client?: PoolClient
 ): Promise<ArenaParticipant> {
   const sql = `INSERT INTO arena_participants
@@ -521,6 +523,38 @@ export async function createArenaParticipant(
   return rows[0];
 }
 
+export async function createArenaParticipantsBatch(
+  arenaId: number,
+  participants: ArenaParticipantInput[],
+  client: PoolClient
+): Promise<void> {
+  if (participants.length === 0) return;
+
+  const values: unknown[] = [];
+  const placeholders: string[] = [];
+  let idx = 1;
+
+  for (const p of participants) {
+    placeholders.push(
+      `($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6}, $${idx + 7}, $${idx + 8}, $${idx + 9}, $${idx + 10}, $${idx + 11})`
+    );
+    values.push(
+      arenaId, p.playerId, p.slotIndex, p.isStockBot,
+      p.stockBotName, p.redcode, p.placement,
+      p.totalScore, p.arenaRatingBefore, p.arenaRatingAfter,
+      p.arenaRdBefore, p.arenaRdAfter,
+    );
+    idx += 12;
+  }
+
+  const sql = `INSERT INTO arena_participants
+    (arena_id, player_id, slot_index, is_stock_bot, stock_bot_name, redcode,
+     placement, total_score, arena_rating_before, arena_rating_after,
+     arena_rd_before, arena_rd_after)
+    VALUES ${placeholders.join(', ')}`;
+  await client.query(sql, values);
+}
+
 export async function createArenaRound(
   arenaId: number,
   roundNumber: number,
@@ -540,6 +574,44 @@ export async function createArenaRound(
   }
   const rows = await query<ArenaRound>(sql, params);
   return rows[0];
+}
+
+export interface ArenaRoundInput {
+  roundNumber: number;
+  seed: number;
+  survivorCount: number;
+  winnerSlot: number | null;
+  scores: number[];
+}
+
+export async function createArenaRoundsBatch(
+  arenaId: number,
+  rounds: ArenaRoundInput[],
+  client: PoolClient
+): Promise<void> {
+  if (rounds.length === 0) return;
+
+  // Batch in chunks of 50 to stay within parameter limits (50 * 6 = 300 params)
+  const CHUNK_SIZE = 50;
+  for (let c = 0; c < rounds.length; c += CHUNK_SIZE) {
+    const chunk = rounds.slice(c, c + CHUNK_SIZE);
+    const values: unknown[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+
+    for (const r of chunk) {
+      placeholders.push(
+        `($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5})`
+      );
+      values.push(arenaId, r.roundNumber, r.seed, r.survivorCount, r.winnerSlot, JSON.stringify(r.scores));
+      idx += 6;
+    }
+
+    const sql = `INSERT INTO arena_rounds
+      (arena_id, round_number, seed, survivor_count, winner_slot, scores)
+      VALUES ${placeholders.join(', ')}`;
+    await client.query(sql, values);
+  }
 }
 
 export async function getArenaById(id: number): Promise<(Arena & { participants: ArenaParticipant[] }) | null> {

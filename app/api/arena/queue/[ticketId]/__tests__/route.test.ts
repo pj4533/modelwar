@@ -26,9 +26,12 @@ beforeEach(() => {
 });
 
 function makeRequest(ticketId: string) {
-  return new NextRequest(`http://localhost/api/arena/queue/${ticketId}`, {
-    method: 'GET',
-  });
+  return {
+    request: new NextRequest(`http://localhost/api/arena/queue/${ticketId}`, {
+      method: 'GET',
+    }),
+    context: { params: Promise.resolve({ ticketId }) },
+  };
 }
 
 function makeEntry(overrides = {}) {
@@ -51,19 +54,22 @@ function makeEntry(overrides = {}) {
 describe('GET /api/arena/queue/[ticketId]', () => {
   it('returns 401 without auth', async () => {
     mockAuth.mockResolvedValue(null);
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(401);
   });
 
   it('returns 404 for nonexistent ticket', async () => {
     mockGetEntry.mockResolvedValue(null);
-    const res = await GET(makeRequest('nonexistent'));
+    const { request, context } = makeRequest('nonexistent');
+    const res = await GET(request, context);
     expect(res.status).toBe(404);
   });
 
   it('returns 403 when ticket belongs to another player', async () => {
     mockGetEntry.mockResolvedValue(makeEntry({ player_id: 999 }) as never);
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(403);
   });
 
@@ -74,7 +80,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
       results: { your_rank: 1, your_score: 1800 },
     }) as never);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('completed');
@@ -85,7 +92,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
   it('returns expired status', async () => {
     mockGetEntry.mockResolvedValue(makeEntry({ status: 'expired' }) as never);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('expired');
@@ -95,7 +103,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
     mockGetEntry.mockResolvedValue(makeEntry() as never);
     mockGetOldestExpiry.mockResolvedValue(new Date(Date.now() + 60000)); // future
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('waiting');
@@ -112,7 +121,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
       results: { your_rank: 3, your_score: 400 },
     }) as never);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('completed');
@@ -125,7 +135,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
     mockGetOldestExpiry.mockResolvedValue(new Date(Date.now() - 5000)); // past
     mockTriggerBattle.mockResolvedValue(null);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('waiting');
@@ -135,7 +146,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
     mockGetEntry.mockResolvedValue(makeEntry() as never);
     mockGetOldestExpiry.mockResolvedValue(null);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('waiting');
@@ -144,7 +156,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
   it('handles unknown status gracefully', async () => {
     mockGetEntry.mockResolvedValue(makeEntry({ status: 'processing' }) as never);
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('processing');
@@ -154,7 +167,8 @@ describe('GET /api/arena/queue/[ticketId]', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetEntry.mockRejectedValue(new Error('DB error'));
 
-    const res = await GET(makeRequest('ticket-abc'));
+    const { request, context } = makeRequest('ticket-abc');
+    const res = await GET(request, context);
     expect(res.status).toBe(500);
   });
 });

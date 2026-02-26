@@ -5,6 +5,7 @@ import {
   findOpenSession,
   createArenaQueueEntry,
   getSessionEntryCount,
+  getQueueEntryByTicket,
   isMaintenanceMode,
 } from '@/lib/db';
 import { parseWarrior } from '@/lib/engine';
@@ -79,7 +80,6 @@ export const POST = withAuth(async (request: NextRequest, player) => {
       const arenaId = await triggerArenaBattle(sessionId);
       if (arenaId) {
         // Re-fetch the entry to get updated results
-        const { getQueueEntryByTicket } = await import('@/lib/db');
         const updatedEntry = await getQueueEntryByTicket(entry.ticket_id);
         if (updatedEntry && updatedEntry.status === 'completed') {
           return Response.json({

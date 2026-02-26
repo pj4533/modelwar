@@ -6,8 +6,8 @@ jest.mock('../arena-glicko');
 import {
   lockSessionEntries,
   createArena,
-  createArenaParticipant,
-  createArenaRound,
+  createArenaParticipantsBatch,
+  createArenaRoundsBatch,
   updateQueueEntriesCompleted,
   updatePlayerArenaRating,
   getPlayersByIds,
@@ -21,8 +21,8 @@ import { triggerArenaBattle } from '../arena-trigger';
 const mockWithTransaction = withTransaction as jest.MockedFunction<typeof withTransaction>;
 const mockLockSession = lockSessionEntries as jest.MockedFunction<typeof lockSessionEntries>;
 const mockCreateArena = createArena as jest.MockedFunction<typeof createArena>;
-const mockCreateParticipant = createArenaParticipant as jest.MockedFunction<typeof createArenaParticipant>;
-const mockCreateRound = createArenaRound as jest.MockedFunction<typeof createArenaRound>;
+const mockCreateParticipantsBatch = createArenaParticipantsBatch as jest.MockedFunction<typeof createArenaParticipantsBatch>;
+const mockCreateRoundsBatch = createArenaRoundsBatch as jest.MockedFunction<typeof createArenaRoundsBatch>;
 const mockUpdateQueueCompleted = updateQueueEntriesCompleted as jest.MockedFunction<typeof updateQueueEntriesCompleted>;
 const mockUpdateArenaRating = updatePlayerArenaRating as jest.MockedFunction<typeof updatePlayerArenaRating>;
 const mockGetPlayers = getPlayersByIds as jest.MockedFunction<typeof getPlayersByIds>;
@@ -113,8 +113,8 @@ describe('triggerArenaBattle', () => {
       id: 1, session_id: 'session-1', seed: 42, total_rounds: 200,
       status: 'completed', started_at: new Date(), completed_at: new Date(), created_at: new Date(),
     });
-    mockCreateParticipant.mockResolvedValue({} as never);
-    mockCreateRound.mockResolvedValue({} as never);
+    mockCreateParticipantsBatch.mockResolvedValue(undefined);
+    mockCreateRoundsBatch.mockResolvedValue(undefined);
     mockUpdateQueueCompleted.mockResolvedValue(undefined);
     mockUpdateArenaRating.mockResolvedValue(undefined);
 
@@ -124,7 +124,7 @@ describe('triggerArenaBattle', () => {
     expect(mockGetStockBots).toHaveBeenCalledWith(7); // 10 - 3 humans
     expect(mockRunBattle).toHaveBeenCalled();
     expect(mockCreateArena).toHaveBeenCalled();
-    expect(mockCreateParticipant).toHaveBeenCalledTimes(10); // 3 humans + 7 bots
+    expect(mockCreateParticipantsBatch).toHaveBeenCalledTimes(1); // single batch insert
     expect(mockUpdateArenaRating).toHaveBeenCalledTimes(3); // 3 humans
     expect(mockUpdateQueueCompleted).toHaveBeenCalled();
   });
@@ -154,8 +154,8 @@ describe('triggerArenaBattle', () => {
       id: 2, session_id: 'session-1', seed: 42, total_rounds: 200,
       status: 'completed', started_at: new Date(), completed_at: new Date(), created_at: new Date(),
     });
-    mockCreateParticipant.mockResolvedValue({} as never);
-    mockCreateRound.mockResolvedValue({} as never);
+    mockCreateParticipantsBatch.mockResolvedValue(undefined);
+    mockCreateRoundsBatch.mockResolvedValue(undefined);
     mockUpdateQueueCompleted.mockResolvedValue(undefined);
     mockUpdateArenaRating.mockResolvedValue(undefined);
 

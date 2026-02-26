@@ -2,12 +2,13 @@ import {
   withTransaction,
   lockSessionEntries,
   createArena,
-  createArenaParticipant,
-  createArenaRound,
+  createArenaParticipantsBatch,
+  createArenaRoundsBatch,
   updateQueueEntriesCompleted,
   updatePlayerArenaRating,
   getPlayersByIds,
 } from './db';
+import type { ArenaParticipantInput } from './db';
 import { runArenaBattle, ARENA_NUM_ROUNDS } from './arena-engine';
 import { getStockBots } from './stock-bots';
 import { calculateArenaRatings } from './arena-glicko';
@@ -111,43 +112,40 @@ export async function triggerArenaBattle(sessionId: string): Promise<number | nu
       client
     );
 
-    // 9. Create arena participants
-    for (const pd of participantData) {
+    // 9. Create arena participants (batched)
+    const participantInputs: ArenaParticipantInput[] = participantData.map((pd) => {
       const placement = placementMap.get(pd.slotIndex);
       const player = pd.playerId ? playerMap.get(pd.playerId) : null;
       const ratingUpdate = pd.playerId ? ratingUpdates.get(pd.playerId) : undefined;
 
-      await createArenaParticipant(
-        arena.id,
-        {
-          playerId: pd.playerId,
-          slotIndex: pd.slotIndex,
-          isStockBot: pd.isStockBot,
-          stockBotName: pd.stockBotName,
-          redcode: pd.redcode,
-          placement: placement?.placement ?? MAX_ARENA_SIZE,
-          totalScore: placement?.totalScore ?? 0,
-          arenaRatingBefore: player?.arena_rating ?? null,
-          arenaRatingAfter: ratingUpdate?.rating ?? null,
-          arenaRdBefore: player?.arena_rd ?? null,
-          arenaRdAfter: ratingUpdate?.rd ?? null,
-        },
-        client
-      );
-    }
+      return {
+        playerId: pd.playerId,
+        slotIndex: pd.slotIndex,
+        isStockBot: pd.isStockBot,
+        stockBotName: pd.stockBotName,
+        redcode: pd.redcode,
+        placement: placement?.placement ?? MAX_ARENA_SIZE,
+        totalScore: placement?.totalScore ?? 0,
+        arenaRatingBefore: player?.arena_rating ?? null,
+        arenaRatingAfter: ratingUpdate?.rating ?? null,
+        arenaRdBefore: player?.arena_rd ?? null,
+        arenaRdAfter: ratingUpdate?.rd ?? null,
+      };
+    });
+    await createArenaParticipantsBatch(arena.id, participantInputs, client);
 
-    // 10. Create arena rounds
-    for (const rr of arenaResult.roundResults) {
-      await createArenaRound(
-        arena.id,
-        rr.round,
-        rr.seed,
-        rr.survivorCount,
-        rr.winnerSlot,
-        rr.scores,
-        client
-      );
-    }
+    // 10. Create arena rounds (batched)
+    await createArenaRoundsBatch(
+      arena.id,
+      arenaResult.roundResults.map((rr) => ({
+        roundNumber: rr.round,
+        seed: rr.seed,
+        survivorCount: rr.survivorCount,
+        winnerSlot: rr.winnerSlot,
+        scores: rr.scores,
+      })),
+      client
+    );
 
     // 11. Update player arena ratings
     for (const pd of participantData) {
