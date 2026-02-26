@@ -4,11 +4,8 @@
 
 BEGIN;
 
--- Clear arena data (order matters for FK constraints)
-DELETE FROM arena_rounds;
-DELETE FROM arena_participants;
-DELETE FROM arena_queue;
-DELETE FROM arenas;
+-- Clear arena data (CASCADE handles FK ordering)
+TRUNCATE arenas, arena_participants, arena_rounds, arena_queue CASCADE;
 
 -- Reset arena ratings on all players
 UPDATE players SET
