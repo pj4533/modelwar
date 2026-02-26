@@ -189,7 +189,12 @@ export async function updatePlayerRating(
 export async function getPlayersByIds(ids: number[]): Promise<Player[]> {
   if (ids.length === 0) return [];
   return query<Player>(
-    'SELECT id, name, elo_rating, rating_deviation, rating_volatility, wins, losses, ties, created_at FROM players WHERE id = ANY($1)',
+    `SELECT id, name, elo_rating, rating_deviation, rating_volatility,
+            wins, losses, ties,
+            arena_rating, arena_rd, arena_volatility,
+            arena_wins, arena_losses, arena_ties,
+            created_at
+     FROM players WHERE id = ANY($1)`,
     [ids]
   );
 }
