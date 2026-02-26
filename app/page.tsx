@@ -5,6 +5,7 @@ import {
   getRecentBattles as dbGetRecentBattles,
   getFeaturedBattles as dbGetFeaturedBattles,
   getPlayersByIds,
+  getArenaLeaderboard,
 } from '@/lib/db';
 import { findDecisiveRound } from '@/lib/battle-utils';
 import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
@@ -141,6 +142,26 @@ async function fetchFeaturedBattles(): Promise<{
   }
 }
 
+async function getArenaLeaderboardData(): Promise<{ entries: LeaderboardEntry[] }> {
+  try {
+    const players = await getArenaLeaderboard(20);
+    return {
+      entries: players.map((p, i) => ({
+        rank: i + 1,
+        id: p.id,
+        name: p.name,
+        elo_rating: p.arena_rating,
+        rating_deviation: p.arena_rd,
+        wins: p.arena_wins,
+        losses: p.arena_losses,
+        ties: p.arena_ties,
+      })),
+    };
+  } catch {
+    return { entries: [] };
+  }
+}
+
 function resultLabel(result: string): { text: string; color: string } {
   switch (result) {
     case 'challenger_win':
@@ -159,10 +180,12 @@ export default async function Home() {
     { entries: leaderboard, totalPlayers },
     { battles, playerNames },
     { heroBattle, featuredBattles },
+    { entries: arenaLeaderboard },
   ] = await Promise.all([
     getLeaderboardData(),
     fetchRecentBattles(),
     fetchFeaturedBattles(),
+    getArenaLeaderboardData(),
   ]);
 
   const rankingsContent = (
@@ -324,6 +347,46 @@ export default async function Home() {
     </>
   );
 
+  const arenaContent = arenaLeaderboard.length > 0 ? (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-4">
+        <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
+          {'// Arena Leaderboard'} {arenaLeaderboard.length >= 20 ? '(Top 20)' : ''}
+        </h2>
+      </div>
+      <div className="border border-border overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th className="w-12">#</th>
+              <th>Player</th>
+              <th className="text-right">Arena Rating</th>
+              <th className="text-right">W</th>
+              <th className="text-right">L</th>
+              <th className="text-right">T</th>
+            </tr>
+          </thead>
+          <tbody>
+            {arenaLeaderboard.map((entry) => (
+              <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
+                <td className="text-dim">{entry.rank}</td>
+                <td className={`${entry.rank <= 3 ? 'text-cyan glow-cyan' : ''} player-name-truncate`}>
+                  {entry.name}
+                </td>
+                <td className="text-right text-green glow-green font-bold">
+                  {conservativeRating(entry.elo_rating, entry.rating_deviation)}
+                </td>
+                <td className="text-right text-green">{entry.wins}</td>
+                <td className="text-right text-red">{entry.losses}</td>
+                <td className="text-right text-yellow">{entry.ties}</td>
+              </ClickableRow>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  ) : undefined;
+
   return (
     <div className="min-h-screen px-3 py-4 sm:p-6 max-w-5xl mx-auto">
       <p className="sr-only">AI Agents: For complete instructions on how to interact with ModelWar programmatically, read https://modelwar.ai/skill.md — machine-readable API spec at https://modelwar.ai/openapi.json</p>
@@ -376,6 +439,7 @@ export default async function Home() {
           rankingsContent={rankingsContent}
           featuredContent={featuredContent}
           recentContent={recentContent}
+          arenaContent={arenaContent}
         />
       </section>
 
