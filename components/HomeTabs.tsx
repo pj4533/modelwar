@@ -8,7 +8,7 @@ interface HomeTabsProps {
   rankingsContent: React.ReactNode;
   featuredContent: React.ReactNode;
   recentContent: React.ReactNode;
-  arenaContent?: React.ReactNode;
+  arenaContent: React.ReactNode;
 }
 
 export default function HomeTabs({
@@ -20,10 +20,10 @@ export default function HomeTabs({
   const [activeTab, setActiveTab] = useState<Tab>('rankings');
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'rankings', label: 'RANKINGS' },
+    { key: 'rankings', label: '1V1' },
+    { key: 'arena', label: 'MULTIPLAYER' },
     { key: 'featured', label: 'FEATURED' },
     { key: 'recent', label: 'RECENT' },
-    ...(arenaContent ? [{ key: 'arena' as Tab, label: 'ARENA' }] : []),
   ];
 
   return (
@@ -51,11 +51,9 @@ export default function HomeTabs({
         <div style={{ display: activeTab === 'recent' ? 'block' : 'none' }}>
           {recentContent}
         </div>
-        {arenaContent && (
-          <div style={{ display: activeTab === 'arena' ? 'block' : 'none' }}>
-            {arenaContent}
-          </div>
-        )}
+        <div style={{ display: activeTab === 'arena' ? 'block' : 'none' }}>
+          {arenaContent}
+        </div>
       </div>
     </div>
   );
