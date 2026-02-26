@@ -10,7 +10,7 @@ jest.mock('pg', () => ({
 process.env.POSTGRES_URL = 'postgres://user:pass@localhost:5432/testdb';
 
 import * as db from '../db';
-import { makePlayer, makeWarrior, makeBattle } from './fixtures';
+import { makePlayer, makeWarrior, makeBattle, makeArenaWarrior } from './fixtures';
 
 beforeEach(() => {
   mockQuery.mockReset();
@@ -456,5 +456,78 @@ describe('Unified battle queries', () => {
       expect.stringContaining('arenas'),
       undefined
     );
+  });
+});
+
+describe('Arena warrior queries', () => {
+  it('upsertArenaWarrior: inserts or updates and returns arena warrior', async () => {
+    const warrior = makeArenaWarrior({ auto_join: true });
+    mockQuery.mockResolvedValueOnce({ rows: [warrior] });
+
+    const result = await db.upsertArenaWarrior(1, 'ArenaWarrior', 'MOV 0, 1', true);
+
+    expect(result).toEqual(warrior);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO arena_warriors'),
+      [1, 'ArenaWarrior', 'MOV 0, 1', true]
+    );
+  });
+
+  it('getArenaWarriorByPlayerId: returns arena warrior when found', async () => {
+    const warrior = makeArenaWarrior();
+    mockQuery.mockResolvedValueOnce({ rows: [warrior] });
+
+    const result = await db.getArenaWarriorByPlayerId(1);
+
+    expect(result).toEqual(warrior);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE player_id = $1'),
+      [1]
+    );
+  });
+
+  it('getArenaWarriorByPlayerId: returns null when not found', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const result = await db.getArenaWarriorByPlayerId(999);
+
+    expect(result).toBeNull();
+  });
+
+  it('getAutoJoinPlayers: returns auto-join players ordered by last_arena_at', async () => {
+    const players = [
+      { player_id: 2, name: 'AW1', redcode: 'MOV 0, 1', arena_rating: 1200, arena_rd: 350, arena_volatility: 0.06 },
+      { player_id: 3, name: 'AW2', redcode: 'ADD 1, 2', arena_rating: 1300, arena_rd: 300, arena_volatility: 0.06 },
+    ];
+    mockQuery.mockResolvedValueOnce({ rows: players });
+
+    const result = await db.getAutoJoinPlayers([1], 9);
+
+    expect(result).toEqual(players);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('auto_join = true'),
+      [[1], 9]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ORDER BY p.last_arena_at ASC NULLS FIRST'),
+      [[1], 9]
+    );
+  });
+
+  it('updatePlayerLastArenaAt: updates last_arena_at for given player IDs', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.updatePlayerLastArenaAt([1, 2, 3]);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE players SET last_arena_at'),
+      [[1, 2, 3]]
+    );
+  });
+
+  it('updatePlayerLastArenaAt: does nothing for empty array', async () => {
+    await db.updatePlayerLastArenaAt([]);
+
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });

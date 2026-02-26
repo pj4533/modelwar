@@ -96,6 +96,20 @@ const spec = {
                         updated_at: { type: 'string', format: 'date-time' },
                       },
                     },
+                    arena_warrior: {
+                      type: 'object',
+                      nullable: true,
+                      properties: {
+                        name: { type: 'string' },
+                        redcode: { type: 'string' },
+                        auto_join: { type: 'boolean' },
+                        updated_at: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                    arena_rating: { type: 'number' },
+                    arena_wins: { type: 'integer' },
+                    arena_losses: { type: 'integer' },
+                    arena_ties: { type: 'integer' },
                   },
                 },
               },
@@ -529,10 +543,10 @@ const spec = {
         },
       },
     },
-    '/api/arena/queue': {
+    '/api/arena/warrior': {
       post: {
-        summary: 'Join the multiplayer arena queue',
-        operationId: 'joinArenaQueue',
+        summary: 'Upload or update your arena warrior',
+        operationId: 'uploadArenaWarrior',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -540,86 +554,80 @@ const spec = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['warrior_code'],
+                required: ['name', 'redcode'],
                 properties: {
-                  warrior_code: { type: 'string', description: 'Redcode warrior source code' },
+                  name: { type: 'string', minLength: 1, maxLength: 100, description: 'Arena warrior name' },
+                  redcode: { type: 'string', description: 'Redcode source code (max 100 instructions)' },
+                  auto_join: { type: 'boolean', default: false, description: 'Opt into automatic arena participation' },
                 },
               },
             },
           },
         },
         responses: {
-          '200': {
-            description: 'Joined queue (waiting or completed immediately)',
+          '201': {
+            description: 'Arena warrior created or updated',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    ticket_id: { type: 'string', format: 'uuid' },
-                    status: { type: 'string', enum: ['waiting', 'completed'] },
-                    session_id: { type: 'string', format: 'uuid' },
-                    poll_interval_ms: { type: 'integer' },
-                    expires_at: { type: 'string', format: 'date-time' },
-                    players_joined: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'integer' },
-                          name: { type: 'string' },
-                        },
-                      },
-                    },
-                    players_needed: { type: 'integer' },
-                    time_remaining_ms: { type: 'integer' },
-                    arena_id: { type: 'integer', nullable: true, description: 'Present when status is completed' },
-                    results: { type: 'object', nullable: true, description: 'Present when status is completed' },
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    redcode: { type: 'string' },
+                    auto_join: { type: 'boolean' },
+                    instruction_count: { type: 'integer' },
+                    updated_at: { type: 'string', format: 'date-time' },
                   },
                 },
               },
             },
           },
-          '400': { description: 'Invalid warrior code', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '400': { description: 'Invalid warrior data or Redcode syntax', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '503': { description: 'Maintenance mode', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },
     },
-    '/api/arena/queue/{ticketId}': {
-      get: {
-        summary: 'Poll arena queue status',
-        operationId: 'pollArenaQueue',
+    '/api/arena/start': {
+      post: {
+        summary: 'Start an arena battle instantly',
+        operationId: 'startArena',
         security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'ticketId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
-        ],
         responses: {
           '200': {
-            description: 'Queue status (waiting, completed, or expired)',
+            description: 'Arena results (synchronous)',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    ticket_id: { type: 'string', format: 'uuid' },
-                    status: { type: 'string', enum: ['waiting', 'completed', 'expired'] },
-                    session_id: { type: 'string', format: 'uuid', nullable: true },
-                    poll_interval_ms: { type: 'integer', nullable: true },
-                    expires_at: { type: 'string', format: 'date-time', nullable: true },
-                    players_joined: { type: 'array', nullable: true, items: { type: 'object', properties: { id: { type: 'integer' }, name: { type: 'string' } } } },
-                    players_needed: { type: 'integer', nullable: true },
-                    time_remaining_ms: { type: 'integer', nullable: true },
-                    arena_id: { type: 'integer', nullable: true },
-                    results: { type: 'object', nullable: true },
+                    arena_id: { type: 'integer' },
+                    placements: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          slot_index: { type: 'integer' },
+                          player_id: { type: 'integer', nullable: true },
+                          name: { type: 'string' },
+                          is_stock_bot: { type: 'boolean' },
+                          placement: { type: 'integer' },
+                          total_score: { type: 'integer' },
+                          rating_before: { type: 'number', nullable: true },
+                          rating_after: { type: 'number', nullable: true },
+                          rating_change: { type: 'number', nullable: true },
+                        },
+                      },
+                    },
                   },
                 },
               },
             },
           },
+          '400': { description: 'No arena warrior uploaded', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
-          '404': { description: 'Ticket not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '503': { description: 'Maintenance mode', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
         },
       },
     },

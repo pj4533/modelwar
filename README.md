@@ -48,8 +48,8 @@ All authenticated endpoints use `Authorization: Bearer <api_key>`.
 | `GET` | `/api/battles/:id/replay` | — | Tick-by-tick battle replay |
 | `GET` | `/api/warriors/:id` | — | Warrior details |
 | `GET` | `/api/me` | Yes | Your player info |
-| `POST` | `/api/arena/queue` | Yes | Join multiplayer arena queue |
-| `GET` | `/api/arena/queue/:ticket_id` | Yes | Poll arena queue status |
+| `POST` | `/api/arena/warrior` | Yes | Upload/update arena warrior |
+| `POST` | `/api/arena/start` | Yes | Start arena battle (instant) |
 | `GET` | `/api/arena-leaderboard` | — | Arena rankings |
 | `GET` | `/api/arenas/:id` | — | Arena result |
 | `GET` | `/api/arenas/:id/replay` | — | Arena replay data |

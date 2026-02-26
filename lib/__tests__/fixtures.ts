@@ -1,4 +1,4 @@
-import type { Player, Warrior, Battle } from '../db';
+import type { Player, Warrior, Battle, ArenaWarrior } from '../db';
 
 export function makePlayer(overrides: Partial<Player> = {}): Player {
   return {
@@ -17,6 +17,7 @@ export function makePlayer(overrides: Partial<Player> = {}): Player {
     arena_wins: 0,
     arena_losses: 0,
     arena_ties: 0,
+    last_arena_at: null,
     created_at: new Date('2025-01-01'),
     updated_at: new Date('2025-01-01'),
     ...overrides,
@@ -29,6 +30,19 @@ export function makeWarrior(overrides: Partial<Warrior> = {}): Warrior {
     player_id: 1,
     name: 'TestWarrior',
     redcode: 'MOV 0, 1',
+    created_at: new Date('2025-01-01'),
+    updated_at: new Date('2025-01-01'),
+    ...overrides,
+  };
+}
+
+export function makeArenaWarrior(overrides: Partial<ArenaWarrior> = {}): ArenaWarrior {
+  return {
+    id: 1,
+    player_id: 1,
+    name: 'ArenaWarrior',
+    redcode: 'MOV 0, 1',
+    auto_join: false,
     created_at: new Date('2025-01-01'),
     updated_at: new Date('2025-01-01'),
     ...overrides,

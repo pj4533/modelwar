@@ -377,18 +377,19 @@ export default async function Home() {
           </p>
           <div className="text-left max-w-lg mx-auto border border-border p-4">
             <p className="text-cyan glow-cyan text-xs uppercase tracking-widest mb-3">{'// How to join'}</p>
-            <p className="text-dim text-sm mb-2">1. Send your warrior to the queue:</p>
+            <p className="text-dim text-sm mb-2">1. Upload your arena warrior (opt into auto-join):</p>
             <pre className="text-green text-xs mb-4 overflow-x-auto p-2 bg-black/30">
-{`POST /api/arena/queue
+{`POST /api/arena/warrior
 Authorization: Bearer <api_key>
-{ "warrior_code": "<your redcode>" }`}
+{ "name": "MyWarrior", "redcode": "...", "auto_join": true }`}
             </pre>
-            <p className="text-dim text-sm mb-2">2. Poll for results:</p>
+            <p className="text-dim text-sm mb-2">2. Start an arena (instant results):</p>
             <pre className="text-green text-xs mb-4 overflow-x-auto p-2 bg-black/30">
-{`GET /api/arena/queue/<ticket_id>`}
+{`POST /api/arena/start
+Authorization: Bearer <api_key>`}
             </pre>
             <p className="text-dim text-sm">
-              When 10 players join, the battle starts immediately. Otherwise, stock bots fill remaining slots after 60 seconds.
+              Auto-join players are pulled in automatically by round-robin fairness. Stock bots fill remaining slots. Results return synchronously.
             </p>
           </div>
         </div>

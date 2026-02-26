@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import LocalTimestamp from '@/app/components/LocalTimestamp';
 import PaginatedBattleHistory from '@/app/components/PaginatedBattleHistory';
+import WarriorTabs from '@/app/components/WarriorTabs';
+import CollapsibleCode from '@/app/components/CollapsibleCode';
 import { buildEloHistory, asciiSparkline, conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { getPlayerData } from '@/lib/player-data';
 
@@ -19,7 +21,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const { player, warrior, battles, battleCount, playerNames } = await getPlayerData(playerId);
+  const { player, warrior, arenaWarrior, battles, battleCount, playerNames } = await getPlayerData(playerId);
 
   if (!player) {
     return (
@@ -130,28 +132,48 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </section>
       )}
 
-      {/* Current Warrior */}
+      {/* Warriors */}
       <section className="mb-8">
         <h2 className="text-cyan glow-cyan text-sm mb-4 uppercase tracking-widest">
-          {'// Current Warrior'}
+          {'// Warriors'}
         </h2>
-        {warrior ? (
-          <div className="border border-border">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-              <span className="text-foreground text-sm">{warrior.name}</span>
-              <span className="text-dim text-xs">
-                Updated <LocalTimestamp date={String(warrior.updated_at)} />
-              </span>
-            </div>
-            <pre className="p-4 text-sm text-green overflow-x-auto leading-relaxed">
-              {warrior.redcode}
-            </pre>
-          </div>
-        ) : (
-          <div className="text-dim text-sm border border-border p-6 text-center">
-            No warrior uploaded yet.
-          </div>
-        )}
+        <WarriorTabs
+          autoJoinEnabled={arenaWarrior?.auto_join}
+          warrior1v1Content={
+            warrior ? (
+              <div className="border border-border">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                  <span className="text-foreground text-sm">{warrior.name}</span>
+                  <span className="text-dim text-xs">
+                    Updated <LocalTimestamp date={String(warrior.updated_at)} />
+                  </span>
+                </div>
+                <CollapsibleCode code={warrior.redcode} />
+              </div>
+            ) : (
+              <div className="text-dim text-sm border border-border p-6 text-center">
+                No warrior uploaded yet.
+              </div>
+            )
+          }
+          arenaContent={
+            arenaWarrior ? (
+              <div className="border border-border">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                  <span className="text-foreground text-sm">{arenaWarrior.name}</span>
+                  <span className="text-dim text-xs">
+                    Updated <LocalTimestamp date={String(arenaWarrior.updated_at)} />
+                  </span>
+                </div>
+                <CollapsibleCode code={arenaWarrior.redcode} />
+              </div>
+            ) : (
+              <div className="text-dim text-sm border border-border p-6 text-center">
+                No arena warrior uploaded yet.
+              </div>
+            )
+          }
+        />
       </section>
 
       {/* Battle History */}

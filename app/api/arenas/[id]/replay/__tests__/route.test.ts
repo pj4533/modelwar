@@ -46,7 +46,7 @@ describe('GET /api/arenas/[id]/replay', () => {
       { id: 1, arena_id: 1, round_number: 1, seed: 42, survivor_count: 1, winner_slot: 0, scores: [90, 0] },
     ]);
     mockGetPlayersByIds.mockResolvedValue([
-      { id: 1, name: 'TestPlayer', api_key: 'k', elo_rating: 1200, rating_deviation: 350, rating_volatility: 0.06, wins: 0, losses: 0, ties: 0, arena_rating: 1250, arena_rd: 300, arena_volatility: 0.06, arena_wins: 1, arena_losses: 0, arena_ties: 0, created_at: new Date(), updated_at: new Date() },
+      { id: 1, name: 'TestPlayer', api_key: 'k', elo_rating: 1200, rating_deviation: 350, rating_volatility: 0.06, wins: 0, losses: 0, ties: 0, arena_rating: 1250, arena_rd: 300, arena_volatility: 0.06, arena_wins: 1, arena_losses: 0, arena_ties: 0, last_arena_at: null, created_at: new Date(), updated_at: new Date() },
     ]);
 
     const req = new NextRequest('http://localhost/api/arenas/1/replay');

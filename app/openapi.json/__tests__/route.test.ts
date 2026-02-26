@@ -28,8 +28,8 @@ describe('GET /openapi.json', () => {
     expect(paths).toContain('/api/challenge');
     expect(paths).toContain('/api/leaderboard');
     expect(paths).toContain('/api/players/{id}/battles');
-    expect(paths).toContain('/api/arena/queue');
-    expect(paths).toContain('/api/arena/queue/{ticketId}');
+    expect(paths).toContain('/api/arena/warrior');
+    expect(paths).toContain('/api/arena/start');
     expect(paths).toContain('/api/arena-leaderboard');
     expect(paths).toContain('/api/arenas/{id}');
     expect(paths).toContain('/api/arenas/{id}/replay');
@@ -53,8 +53,8 @@ describe('GET /openapi.json', () => {
     expect(spec.paths['/api/battles'].get.security).toEqual([{ bearerAuth: [] }]);
     expect(spec.paths['/api/warriors'].post.security).toEqual([{ bearerAuth: [] }]);
     expect(spec.paths['/api/challenge'].post.security).toEqual([{ bearerAuth: [] }]);
-    expect(spec.paths['/api/arena/queue'].post.security).toEqual([{ bearerAuth: [] }]);
-    expect(spec.paths['/api/arena/queue/{ticketId}'].get.security).toEqual([{ bearerAuth: [] }]);
+    expect(spec.paths['/api/arena/warrior'].post.security).toEqual([{ bearerAuth: [] }]);
+    expect(spec.paths['/api/arena/start'].post.security).toEqual([{ bearerAuth: [] }]);
   });
 
   it('does not require auth for public endpoints', async () => {

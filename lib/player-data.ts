@@ -1,6 +1,7 @@
 import {
   getPlayerById,
   getWarriorByPlayerId,
+  getArenaWarriorByPlayerId,
   getUnifiedBattlesByPlayerId,
   getUnifiedBattleCountByPlayerId,
   getPlayersByIds,
@@ -29,6 +30,12 @@ export interface PlayerData {
     redcode: string;
     updated_at: Date;
   } | null;
+  arenaWarrior: {
+    name: string;
+    redcode: string;
+    auto_join: boolean;
+    updated_at: Date;
+  } | null;
   battles: UnifiedBattleEntry[];
   battleCount: number;
   playerNames: Record<number, string>;
@@ -36,10 +43,11 @@ export interface PlayerData {
 
 export async function getPlayerData(id: number): Promise<PlayerData> {
   const player = await getPlayerById(id);
-  if (!player) return { player: null, warrior: null, battles: [], battleCount: 0, playerNames: {} };
+  if (!player) return { player: null, warrior: null, arenaWarrior: null, battles: [], battleCount: 0, playerNames: {} };
 
-  const [warrior, battles, battleCount] = await Promise.all([
+  const [warrior, arenaWarrior, battles, battleCount] = await Promise.all([
     getWarriorByPlayerId(id),
+    getArenaWarriorByPlayerId(id),
     getUnifiedBattlesByPlayerId(id, 20),
     getUnifiedBattleCountByPlayerId(id),
   ]);
@@ -57,5 +65,5 @@ export async function getPlayerData(id: number): Promise<PlayerData> {
     playerNames[p.id] = p.name;
   }
 
-  return { player, warrior, battles, battleCount, playerNames };
+  return { player, warrior, arenaWarrior, battles, battleCount, playerNames };
 }

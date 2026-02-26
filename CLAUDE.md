@@ -47,13 +47,14 @@ The `settings` table has a `maintenance_mode` flag. When `'true'`, the challenge
 
 ## Arena Mode
 
-10-player battle royale with separate Glicko-2 rating.
+10-player battle royale with separate Glicko-2 rating. Auto-join + instant start system.
 
-- **Tables**: `arena_queue`, `arenas`, `arena_participants`, `arena_rounds`
-- **Key files**: `lib/arena-engine.ts`, `lib/arena-trigger.ts`, `lib/arena-glicko.ts`, `lib/stock-bots.ts`
-- **Migration**: `sql/014_multiplayer_arenas.sql`
-- **Rating columns**: `arena_rating`, `arena_rd`, `arena_volatility` on `players` table
-- Maintenance mode also blocks the arena queue (returns 503)
+- **Tables**: `arena_warriors`, `arenas`, `arena_participants`, `arena_rounds`
+- **Key files**: `lib/arena-engine.ts`, `lib/arena-start.ts`, `lib/arena-glicko.ts`, `lib/stock-bots.ts`
+- **Migrations**: `sql/014_multiplayer_arenas.sql`, `sql/016_arena_warriors_auto_join.sql`
+- **Rating columns**: `arena_rating`, `arena_rd`, `arena_volatility`, `last_arena_at` on `players` table
+- **Arena warriors**: one per player in `arena_warriors` table, with `auto_join` flag for round-robin participation
+- Maintenance mode blocks arena start (returns 503)
 
 ## Testing
 

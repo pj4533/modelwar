@@ -42,6 +42,17 @@ export interface Player {
   arena_wins: number;
   arena_losses: number;
   arena_ties: number;
+  last_arena_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ArenaWarrior {
+  id: number;
+  player_id: number;
+  name: string;
+  redcode: string;
+  auto_join: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -312,20 +323,6 @@ export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
 
 // Arena types
 
-export interface ArenaQueueEntry {
-  id: string;
-  player_id: number;
-  ticket_id: string;
-  session_id: string;
-  status: string;
-  redcode: string;
-  arena_id: number | null;
-  results: Record<string, unknown> | null;
-  joined_at: Date;
-  expires_at: Date;
-  created_at: Date;
-}
-
 export interface Arena {
   id: number;
   session_id: string;
@@ -361,109 +358,6 @@ export interface ArenaRound {
   survivor_count: number;
   winner_slot: number | null;
   scores: number[];
-}
-
-// Arena queue functions
-
-export async function createArenaQueueEntry(
-  playerId: number,
-  sessionId: string,
-  redcode: string,
-  client?: PoolClient
-): Promise<ArenaQueueEntry> {
-  const sql = `INSERT INTO arena_queue (player_id, session_id, redcode)
-    VALUES ($1, $2, $3) RETURNING *`;
-  const params = [playerId, sessionId, redcode];
-  if (client) {
-    const result = await client.query(sql, params);
-    return result.rows[0] as ArenaQueueEntry;
-  }
-  const rows = await query<ArenaQueueEntry>(sql, params);
-  return rows[0];
-}
-
-export async function getQueueEntryByTicket(ticketId: string): Promise<ArenaQueueEntry | null> {
-  return queryOne<ArenaQueueEntry>(
-    'SELECT * FROM arena_queue WHERE ticket_id = $1',
-    [ticketId]
-  );
-}
-
-export async function getWaitingEntryForPlayer(playerId: number): Promise<ArenaQueueEntry | null> {
-  return queryOne<ArenaQueueEntry>(
-    "SELECT * FROM arena_queue WHERE player_id = $1 AND status = 'waiting'",
-    [playerId]
-  );
-}
-
-export async function findOpenSession(): Promise<string | null> {
-  const row = await queryOne<{ session_id: string }>(
-    `SELECT session_id FROM arena_queue
-     WHERE status = 'waiting'
-     GROUP BY session_id
-     HAVING COUNT(*) < 10
-     ORDER BY MIN(joined_at)
-     LIMIT 1`
-  );
-  return row?.session_id ?? null;
-}
-
-export async function getSessionEntries(
-  sessionId: string,
-  client?: PoolClient
-): Promise<ArenaQueueEntry[]> {
-  const sql = "SELECT * FROM arena_queue WHERE session_id = $1 AND status = 'waiting' ORDER BY joined_at";
-  const params = [sessionId];
-  if (client) {
-    const result = await client.query(sql, params);
-    return result.rows as ArenaQueueEntry[];
-  }
-  return query<ArenaQueueEntry>(sql, params);
-}
-
-export async function lockSessionEntries(
-  sessionId: string,
-  client: PoolClient
-): Promise<ArenaQueueEntry[]> {
-  const result = await client.query(
-    "SELECT * FROM arena_queue WHERE session_id = $1 AND status = 'waiting' FOR UPDATE",
-    [sessionId]
-  );
-  return result.rows as ArenaQueueEntry[];
-}
-
-export async function getSessionEntryCount(
-  sessionId: string,
-  client?: PoolClient
-): Promise<number> {
-  const sql = "SELECT COUNT(*) as count FROM arena_queue WHERE session_id = $1 AND status = 'waiting'";
-  const params = [sessionId];
-  if (client) {
-    const result = await client.query(sql, params);
-    return parseInt(result.rows[0].count, 10);
-  }
-  const rows = await query<{ count: string }>(sql, params);
-  return parseInt(rows[0].count, 10);
-}
-
-export async function updateQueueEntriesCompleted(
-  sessionId: string,
-  arenaId: number,
-  resultsByPlayerId: Map<number, Record<string, unknown>>,
-  client: PoolClient
-): Promise<void> {
-  // Update all entries for this session
-  const entries = await client.query(
-    "SELECT id, player_id FROM arena_queue WHERE session_id = $1 AND status = 'waiting'",
-    [sessionId]
-  );
-  for (const entry of entries.rows) {
-    const results = resultsByPlayerId.get(entry.player_id) ?? {};
-    await client.query(
-      "UPDATE arena_queue SET status = 'completed', arena_id = $1, results = $2 WHERE id = $3",
-      [arenaId, JSON.stringify(results), entry.id]
-    );
-  }
 }
 
 // Arena CRUD functions
@@ -665,6 +559,70 @@ export async function updatePlayerArenaRating(
     WHERE id = $7`;
   const params = [newRating, newRd, newVolatility, winInc, lossInc, tieInc, playerId];
 
+  if (client) {
+    await client.query(sql, params);
+  } else {
+    await query(sql, params);
+  }
+}
+
+// Arena warrior functions
+
+export async function upsertArenaWarrior(
+  playerId: number,
+  name: string,
+  redcode: string,
+  autoJoin: boolean
+): Promise<ArenaWarrior> {
+  const rows = await query<ArenaWarrior>(
+    `INSERT INTO arena_warriors (player_id, name, redcode, auto_join) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (player_id) DO UPDATE SET name = $2, redcode = $3, auto_join = $4, updated_at = NOW()
+     RETURNING *`,
+    [playerId, name, redcode, autoJoin]
+  );
+  return rows[0];
+}
+
+export async function getArenaWarriorByPlayerId(playerId: number): Promise<ArenaWarrior | null> {
+  return queryOne<ArenaWarrior>(
+    'SELECT * FROM arena_warriors WHERE player_id = $1',
+    [playerId]
+  );
+}
+
+export interface AutoJoinPlayer {
+  player_id: number;
+  name: string;
+  redcode: string;
+  arena_rating: number;
+  arena_rd: number;
+  arena_volatility: number;
+}
+
+export async function getAutoJoinPlayers(
+  excludePlayerIds: number[],
+  limit: number
+): Promise<AutoJoinPlayer[]> {
+  return query<AutoJoinPlayer>(
+    `SELECT aw.player_id, aw.name, aw.redcode,
+            p.arena_rating, p.arena_rd, p.arena_volatility
+     FROM arena_warriors aw
+     INNER JOIN players p ON p.id = aw.player_id
+     WHERE aw.auto_join = true
+       AND aw.player_id != ALL($1)
+     ORDER BY p.last_arena_at ASC NULLS FIRST
+     LIMIT $2`,
+    [excludePlayerIds, limit]
+  );
+}
+
+export async function updatePlayerLastArenaAt(
+  playerIds: number[],
+  client?: PoolClient
+): Promise<void> {
+  if (playerIds.length === 0) return;
+  const sql = 'UPDATE players SET last_arena_at = NOW() WHERE id = ANY($1)';
+  const params = [playerIds];
   if (client) {
     await client.query(sql, params);
   } else {
@@ -910,10 +868,3 @@ export async function getArenaCountByPlayerId(playerId: number): Promise<number>
   return parseInt(rows[0].count, 10);
 }
 
-export async function getOldestSessionExpiry(sessionId: string): Promise<Date | null> {
-  const row = await queryOne<{ expires_at: Date }>(
-    "SELECT MIN(expires_at) as expires_at FROM arena_queue WHERE session_id = $1 AND status = 'waiting'",
-    [sessionId]
-  );
-  return row?.expires_at ?? null;
-}
