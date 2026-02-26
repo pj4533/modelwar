@@ -59,7 +59,7 @@ The `settings` table has a `maintenance_mode` flag. When `'true'`, the challenge
 
 All tests use Jest with `ts-jest`. Run `npm test` for full suite with coverage.
 
-- **NEVER lower coverage thresholds below 80%** on any metric (branches, functions, lines, statements)
+- **RULE: Coverage thresholds in jest.config.ts MUST remain at 80% or higher for ALL metrics (branches, functions, lines, statements). NEVER lower these thresholds for any reason.** If new code causes coverage to drop below 80%, add tests to bring it back up — do not reduce the threshold.
 - All tests use mocks only — never connect to a real database
 - Mock patterns: `jest.mock('pg')` for db tests, `jest.mock('@/lib/db')` for route tests
 - Dynamic route params use `{ params: Promise.resolve({ id: '1' }) }` (Next.js 16)
