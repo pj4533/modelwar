@@ -14,6 +14,7 @@ import { findDecisiveRound } from '@/lib/battle-utils';
 import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
 import HeroReplay from '@/components/HeroReplay';
+import HeroArenaReplay from '@/components/HeroArenaReplay';
 import HomeTabs from '@/components/HomeTabs';
 import PaginatedRecentActivity from '@/app/components/PaginatedRecentActivity';
 
@@ -148,7 +149,7 @@ async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNam
 }
 
 async function fetchFeaturedBattles(): Promise<{
-  heroBattle: FeaturedEntry1v1 | null;
+  heroBattle: FeaturedEntry | null;
   featuredBattles: FeaturedEntry[];
 }> {
   try {
@@ -213,10 +214,9 @@ async function fetchFeaturedBattles(): Promise<{
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 20);
 
-    // Hero replay: pick only from 1v1 entries
-    const hero1v1 = allFeatured.filter((e): e is FeaturedEntry1v1 => e.type === '1v1');
-    const heroBattle = hero1v1.length > 0
-      ? hero1v1[Math.floor(Math.random() * hero1v1.length)]
+    // Hero replay: pick from all featured entries (1v1 and arena)
+    const heroBattle = allFeatured.length > 0
+      ? allFeatured[Math.floor(Math.random() * allFeatured.length)]
       : null;
 
     return {
@@ -509,14 +509,26 @@ Authorization: Bearer <api_key>`}
       {/* Hero Replay */}
       {heroBattle && (
         <section className="mb-6 sm:mb-12">
-          <HeroReplay
-            battleId={heroBattle.id}
-            roundNumber={heroBattle.decisiveRound}
-            challengerName={heroBattle.challengerName}
-            defenderName={heroBattle.defenderName}
-            score={heroBattle.score}
-            result={heroBattle.result}
-          />
+          {heroBattle.type === '1v1' ? (
+            <HeroReplay
+              battleId={heroBattle.id}
+              roundNumber={heroBattle.decisiveRound}
+              challengerName={heroBattle.challengerName}
+              defenderName={heroBattle.defenderName}
+              score={heroBattle.score}
+              result={heroBattle.result}
+            />
+          ) : (
+            <HeroArenaReplay
+              arenaId={heroBattle.id}
+              roundNumber={heroBattle.compellingRound}
+              winnerName={heroBattle.winnerName}
+              runnerUpName={heroBattle.runnerUpName}
+              winnerScore={heroBattle.winnerScore}
+              runnerUpScore={heroBattle.runnerUpScore}
+              participantCount={heroBattle.participantCount}
+            />
+          )}
         </section>
       )}
 
