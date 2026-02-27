@@ -5,6 +5,7 @@ import {
   getRecentUnifiedBattles,
   getRecentUnifiedBattleCount,
   getFeaturedBattles as dbGetFeaturedBattles,
+  getFeaturedArenas as dbGetFeaturedArenas,
   getPlayersByIds,
   getArenaLeaderboard,
 } from '@/lib/db';
@@ -43,15 +44,30 @@ interface RecentEntry {
   created_at: string;
 }
 
-interface FeaturedBattleEntry {
+interface FeaturedEntry1v1 {
+  type: '1v1';
   id: number;
   challengerName: string;
   defenderName: string;
   score: string;
-  avgElo: number;
   result: string;
   decisiveRound: number;
+  created_at: string;
 }
+
+interface FeaturedEntryArena {
+  type: 'arena';
+  id: number;
+  winnerName: string;
+  runnerUpName: string;
+  participantCount: number;
+  winnerScore: number;
+  runnerUpScore: number;
+  compellingRound: number;
+  created_at: string;
+}
+
+type FeaturedEntry = FeaturedEntry1v1 | FeaturedEntryArena;
 
 interface PlayerMap {
   [id: number]: string;
@@ -132,38 +148,80 @@ async function fetchRecentBattles(): Promise<{ battles: RecentEntry[]; playerNam
 }
 
 async function fetchFeaturedBattles(): Promise<{
-  heroBattle: FeaturedBattleEntry | null;
-  featuredBattles: FeaturedBattleEntry[];
+  heroBattle: FeaturedEntry1v1 | null;
+  featuredBattles: FeaturedEntry[];
 }> {
   try {
-    const battles = await dbGetFeaturedBattles(5);
-    if (battles.length === 0) return { heroBattle: null, featuredBattles: [] };
+    const [battles, arenas] = await Promise.all([
+      dbGetFeaturedBattles(20),
+      dbGetFeaturedArenas(20),
+    ]);
 
-    const playerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
-    const players = await getPlayersByIds(playerIds);
+    if (battles.length === 0 && arenas.length === 0) return { heroBattle: null, featuredBattles: [] };
+
+    // Resolve player names for 1v1 battles
+    const battlePlayerIds = [...new Set(battles.flatMap(b => [b.challenger_id, b.defender_id]))];
+    // Resolve player names for arena winners/runners-up (non-stock-bot only)
+    const arenaPlayerIds = [
+      ...arenas.filter(a => !a.winner_is_stock && a.winner_player_id).map(a => a.winner_player_id!),
+      ...arenas.filter(a => !a.runner_up_is_stock && a.runner_up_player_id).map(a => a.runner_up_player_id!),
+    ];
+    const allPlayerIds = [...new Set([...battlePlayerIds, ...arenaPlayerIds])];
+    const players = await getPlayersByIds(allPlayerIds);
     const playerNames: PlayerMap = {};
     for (const p of players) {
       playerNames[p.id] = p.name;
     }
 
-    const featured: FeaturedBattleEntry[] = battles.map(b => {
+    const featured1v1: FeaturedEntry1v1[] = battles.map(b => {
       const roundResults = b.round_results ?? [];
       const decisiveRound = findDecisiveRound(roundResults, b.challenger_wins, b.defender_wins);
       return {
+        type: '1v1' as const,
         id: b.id,
         challengerName: playerNames[b.challenger_id] || `Player #${b.challenger_id}`,
         defenderName: playerNames[b.defender_id] || `Player #${b.defender_id}`,
         score: `${b.challenger_wins} - ${b.defender_wins} - ${b.rounds - b.challenger_wins - b.defender_wins}`,
-        avgElo: Math.round((b.challenger_elo_before + b.defender_elo_before) / 2),
         result: b.result,
         decisiveRound,
+        created_at: String(b.created_at),
       };
     });
 
-    const heroIndex = Math.floor(Math.random() * featured.length);
+    const featuredArenas: FeaturedEntryArena[] = arenas.map(a => {
+      const winnerName = a.winner_is_stock
+        ? (a.winner_stock_name || 'Stock Bot')
+        : (playerNames[a.winner_player_id!] || `Player #${a.winner_player_id}`);
+      const runnerUpName = a.runner_up_is_stock
+        ? (a.runner_up_stock_name || 'Stock Bot')
+        : (playerNames[a.runner_up_player_id!] || `Player #${a.runner_up_player_id}`);
+      return {
+        type: 'arena' as const,
+        id: a.id,
+        winnerName,
+        runnerUpName,
+        participantCount: a.participant_count,
+        winnerScore: a.winner_score,
+        runnerUpScore: a.runner_up_score,
+        compellingRound: a.compelling_round,
+        created_at: String(a.created_at),
+      };
+    });
+
+    // Merge and sort by created_at DESC, take top 20
+    const allFeatured: FeaturedEntry[] = [...featured1v1, ...featuredArenas]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 20);
+
+    // Hero replay: pick only from 1v1 entries
+    const hero1v1 = allFeatured.filter((e): e is FeaturedEntry1v1 => e.type === '1v1');
+    const heroBattle = hero1v1.length > 0
+      ? hero1v1[Math.floor(Math.random() * hero1v1.length)]
+      : null;
+
     return {
-      heroBattle: featured[heroIndex],
-      featuredBattles: featured,
+      heroBattle,
+      featuredBattles: allFeatured,
     };
   } catch {
     return { heroBattle: null, featuredBattles: [] };
@@ -288,32 +346,51 @@ export default async function Home() {
           <table>
             <thead>
               <tr>
+                <th className="hidden sm:table-cell">Type</th>
                 <th>Matchup</th>
-                <th className="text-center">Score</th>
-                <th className="text-right hidden sm:table-cell">Avg Rating</th>
                 <th>Result</th>
+                <th className="text-center">Score</th>
                 <th className="text-right">Replay</th>
               </tr>
             </thead>
             <tbody>
               {featuredBattles.map((fb) => {
-                const r = resultLabel(fb.result);
-                return (
-                  <ClickableRow
-                    href={`/battles/${fb.id}/rounds/${fb.decisiveRound}`}
-                    key={fb.id}
-                  >
-                    <td className="player-name-truncate">
-                      <span className="text-green">{fb.challengerName}</span>
-                      <span className="text-dim"> vs </span>
-                      <span className="text-magenta">{fb.defenderName}</span>
-                    </td>
-                    <td className="text-center text-cyan">{fb.score}</td>
-                    <td className="text-right text-dim hidden sm:table-cell">{fb.avgElo}</td>
-                    <td className={r.color}>{r.text}</td>
-                    <td className="text-right text-cyan text-xs">WATCH</td>
-                  </ClickableRow>
-                );
+                if (fb.type === '1v1') {
+                  const r = resultLabel(fb.result);
+                  return (
+                    <ClickableRow
+                      href={`/battles/${fb.id}/rounds/${fb.decisiveRound}`}
+                      key={`1v1-${fb.id}`}
+                    >
+                      <td className="hidden sm:table-cell text-dim">1v1</td>
+                      <td className="player-name-truncate">
+                        <span className="text-green">{fb.challengerName}</span>
+                        <span className="text-dim"> vs </span>
+                        <span className="text-magenta">{fb.defenderName}</span>
+                      </td>
+                      <td className={r.color}>{r.text}</td>
+                      <td className="text-center text-cyan">{fb.score}</td>
+                      <td className="text-right text-cyan text-xs">WATCH</td>
+                    </ClickableRow>
+                  );
+                } else {
+                  return (
+                    <ClickableRow
+                      href={`/arenas/${fb.id}/rounds/${fb.compellingRound}`}
+                      key={`arena-${fb.id}`}
+                    >
+                      <td className="hidden sm:table-cell text-magenta">Arena</td>
+                      <td className="player-name-truncate">
+                        <span className="text-green">{fb.winnerName}</span>
+                        <span className="text-dim"> vs </span>
+                        <span className="text-magenta">{fb.runnerUpName}</span>
+                      </td>
+                      <td className="text-yellow">1ST / {fb.participantCount}</td>
+                      <td className="text-center text-cyan">{fb.winnerScore}-{fb.runnerUpScore}</td>
+                      <td className="text-right text-cyan text-xs">WATCH</td>
+                    </ClickableRow>
+                  );
+                }
               })}
             </tbody>
           </table>

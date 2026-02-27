@@ -313,7 +313,7 @@ export async function getRecentPairBattleCount(
   return parseInt(rows[0].count, 10);
 }
 
-export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
+export async function getFeaturedBattles(limit = 20): Promise<Battle[]> {
   return query<Battle>(
     `SELECT * FROM battles
      WHERE result IN ('challenger_win', 'defender_win')
@@ -322,6 +322,45 @@ export async function getFeaturedBattles(limit = 5): Promise<Battle[]> {
        AND round_results IS NOT NULL
      ORDER BY ABS(challenger_wins - defender_wins) ASC, created_at DESC
      LIMIT $1`,
+    [limit]
+  );
+}
+
+export interface FeaturedArena {
+  id: number;
+  created_at: Date;
+  total_rounds: number;
+  winner_player_id: number | null;
+  winner_is_stock: boolean;
+  winner_stock_name: string | null;
+  winner_score: number;
+  runner_up_player_id: number | null;
+  runner_up_is_stock: boolean;
+  runner_up_stock_name: string | null;
+  runner_up_score: number;
+  participant_count: number;
+  compelling_round: number;
+}
+
+export async function getFeaturedArenas(limit = 20): Promise<FeaturedArena[]> {
+  return query<FeaturedArena>(
+    `SELECT a.id, a.created_at, a.total_rounds,
+      ap1.player_id as winner_player_id, ap1.is_stock_bot as winner_is_stock,
+      ap1.stock_bot_name as winner_stock_name, ap1.total_score as winner_score,
+      ap2.player_id as runner_up_player_id, ap2.is_stock_bot as runner_up_is_stock,
+      ap2.stock_bot_name as runner_up_stock_name, ap2.total_score as runner_up_score,
+      (SELECT COUNT(*) FROM arena_participants WHERE arena_id = a.id)::int as participant_count,
+      COALESCE(
+        (SELECT round_number FROM arena_rounds WHERE arena_id = a.id
+         ORDER BY survivor_count DESC, round_number DESC LIMIT 1),
+        1
+      ) as compelling_round
+    FROM arenas a
+    JOIN arena_participants ap1 ON ap1.arena_id = a.id AND ap1.placement = 1
+    JOIN arena_participants ap2 ON ap2.arena_id = a.id AND ap2.placement = 2
+    WHERE a.status = 'completed'
+    ORDER BY (ap1.total_score - ap2.total_score) ASC, a.created_at DESC
+    LIMIT $1`,
     [limit]
   );
 }

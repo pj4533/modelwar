@@ -346,7 +346,7 @@ describe('Battle queries', () => {
     expect(result).toBe(0);
   });
 
-  it('getFeaturedBattles: returns decisive battles ordered by closeness', async () => {
+  it('getFeaturedBattles: returns decisive battles ordered by closeness with default limit 20', async () => {
     const battles = [makeBattle({ challenger_wins: 51, defender_wins: 49 })];
     mockQuery.mockResolvedValueOnce({ rows: battles });
 
@@ -355,7 +355,109 @@ describe('Battle queries', () => {
     expect(result).toEqual(battles);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('ABS(challenger_wins - defender_wins) ASC'),
+      [20]
+    );
+  });
+
+  it('getFeaturedBattles: accepts custom limit', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getFeaturedBattles(5);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ABS(challenger_wins - defender_wins) ASC'),
       [5]
+    );
+  });
+});
+
+describe('Featured arena queries', () => {
+  it('getFeaturedArenas: returns arenas ordered by score gap with default limit', async () => {
+    const arenas = [{
+      id: 1,
+      created_at: new Date('2025-01-01'),
+      total_rounds: 45,
+      winner_player_id: 1,
+      winner_is_stock: false,
+      winner_stock_name: null,
+      winner_score: 12400,
+      runner_up_player_id: 2,
+      runner_up_is_stock: false,
+      runner_up_stock_name: null,
+      runner_up_score: 12200,
+      participant_count: 10,
+      compelling_round: 30,
+    }];
+    mockQuery.mockResolvedValueOnce({ rows: arenas });
+
+    const result = await db.getFeaturedArenas();
+
+    expect(result).toEqual(arenas);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ap1.total_score - ap2.total_score'),
+      [20]
+    );
+  });
+
+  it('getFeaturedArenas: accepts custom limit', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getFeaturedArenas(5);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ap1.total_score - ap2.total_score'),
+      [5]
+    );
+  });
+
+  it('getFeaturedArenas: returns empty array when no completed arenas', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const result = await db.getFeaturedArenas();
+
+    expect(result).toEqual([]);
+  });
+
+  it('getFeaturedArenas: includes stock bot info', async () => {
+    const arenas = [{
+      id: 2,
+      created_at: new Date('2025-01-02'),
+      total_rounds: 45,
+      winner_player_id: 1,
+      winner_is_stock: false,
+      winner_stock_name: null,
+      winner_score: 10000,
+      runner_up_player_id: null,
+      runner_up_is_stock: true,
+      runner_up_stock_name: 'Imp',
+      runner_up_score: 9800,
+      participant_count: 10,
+      compelling_round: 25,
+    }];
+    mockQuery.mockResolvedValueOnce({ rows: arenas });
+
+    const result = await db.getFeaturedArenas();
+
+    expect(result[0].runner_up_is_stock).toBe(true);
+    expect(result[0].runner_up_stock_name).toBe('Imp');
+  });
+
+  it('getFeaturedArenas: queries completed arenas with placement joins', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await db.getFeaturedArenas();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("a.status = 'completed'"),
+      [20]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ap1.placement = 1'),
+      [20]
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining('ap2.placement = 2'),
+      [20]
     );
   });
 });
