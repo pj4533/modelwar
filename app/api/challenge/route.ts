@@ -8,7 +8,7 @@ import {
   isMaintenanceMode,
   getRecentPairBattleCount,
 } from '@/lib/db';
-import { runBattle, parseWarrior } from '@/lib/engine';
+import { runBattle, parseWarrior, isSuicideWarrior } from '@/lib/engine';
 import { calculateNewRatings, GlickoPlayer } from '@/lib/glicko';
 import { conservativeRating } from '@/lib/player-utils';
 import { withAuth, handleRouteError } from '@/lib/api-utils';
@@ -95,6 +95,11 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       defenderWarrior.redcode
     );
 
+    // Detect suicide warriors — zero out rating changes if the loser is one
+    const loserIsSuicide =
+      (battleResult.overallResult === 'challenger_win' && isSuicideWarrior(defenderWarrior.redcode)) ||
+      (battleResult.overallResult === 'defender_win' && isSuicideWarrior(challengerWarrior.redcode));
+
     // Calculate new ELO ratings
     const resultMap = {
       challenger_win: { elo: 'a_win' as const, challenger: 'win' as const, defender: 'loss' as const },
@@ -105,33 +110,43 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
     const challengerResultType = mapped.challenger;
     const defenderResultType = mapped.defender;
 
-    const challengerGlicko: GlickoPlayer = {
-      rating: challenger.elo_rating,
-      rd: challenger.rating_deviation,
-      volatility: challenger.rating_volatility,
-    };
-    const defenderGlicko: GlickoPlayer = {
-      rating: defender.elo_rating,
-      rd: defender.rating_deviation,
-      volatility: defender.rating_volatility,
-    };
-
-    const {
-      newRatingA, newRdA, newVolatilityA,
-      newRatingB, newRdB, newVolatilityB,
-    } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
-
-    // Update ratings and record battle atomically, with diminishing returns
     const oldA = { rating: challenger.elo_rating, rd: challenger.rating_deviation, volatility: challenger.rating_volatility };
     const oldB = { rating: defender.elo_rating, rd: defender.rating_deviation, volatility: defender.rating_volatility };
-    const rawNewA = { rating: newRatingA, rd: newRdA, volatility: newVolatilityA };
-    const rawNewB = { rating: newRatingB, rd: newRdB, volatility: newVolatilityB };
 
+    let rawNewA: { rating: number; rd: number; volatility: number };
+    let rawNewB: { rating: number; rd: number; volatility: number };
+
+    if (loserIsSuicide) {
+      // Suicide warrior detected — no rating change for either player
+      rawNewA = oldA;
+      rawNewB = oldB;
+    } else {
+      const challengerGlicko: GlickoPlayer = {
+        rating: challenger.elo_rating,
+        rd: challenger.rating_deviation,
+        volatility: challenger.rating_volatility,
+      };
+      const defenderGlicko: GlickoPlayer = {
+        rating: defender.elo_rating,
+        rd: defender.rating_deviation,
+        volatility: defender.rating_volatility,
+      };
+
+      const {
+        newRatingA, newRdA, newVolatilityA,
+        newRatingB, newRdB, newVolatilityB,
+      } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
+
+      rawNewA = { rating: newRatingA, rd: newRdA, volatility: newVolatilityA };
+      rawNewB = { rating: newRatingB, rd: newRdB, volatility: newVolatilityB };
+    }
+
+    // Update ratings and record battle atomically, with diminishing returns
     const { battle, diminishingFactor } = await withTransaction(async (client) => {
       const pairCount = await getRecentPairBattleCount(
         challenger.id, defender.id, DIMINISHING_WINDOW_MINUTES, client
       );
-      const factor = calculateDiminishingFactor(pairCount);
+      const factor = loserIsSuicide ? 0 : calculateDiminishingFactor(pairCount);
 
       const dim = applyDiminishingFactor(factor, oldA, oldB, rawNewA, rawNewB);
 
@@ -170,6 +185,7 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       battle_id: battle.id,
       result: battleResult.overallResult,
       diminishing_factor: diminishingFactor,
+      suicide_nullified: loserIsSuicide,
       rounds: battleResult.rounds,
       score: {
         challenger_wins: battleResult.challengerWins,

@@ -1,7 +1,7 @@
 jest.mock('pmars-ts');
 
 import { Simulator, Assembler } from 'pmars-ts';
-import { parseWarrior, runBattle } from '../engine';
+import { parseWarrior, runBattle, isSuicideWarrior } from '../engine';
 
 const MockAssembler = Assembler as jest.MockedClass<typeof Assembler>;
 const mockAssemble = MockAssembler.prototype.assemble as jest.Mock;
@@ -108,6 +108,62 @@ describe('parseWarrior', () => {
     ]);
   });
 
+});
+
+describe('isSuicideWarrior', () => {
+  it('detects bare DAT #0,#0', () => {
+    expect(isSuicideWarrior('DAT #0,#0')).toBe(true);
+  });
+
+  it('detects with comments and END', () => {
+    const code = `;redcode-94nop
+;name SuicideFeed
+DAT #0,#0
+END`;
+    expect(isSuicideWarrior(code)).toBe(true);
+  });
+
+  it('detects with different comment text', () => {
+    const code = `;redcode-94nop
+;name SomethingElse
+;author Evil
+DAT #0,#0
+END`;
+    expect(isSuicideWarrior(code)).toBe(true);
+  });
+
+  it('detects case-insensitive DAT', () => {
+    expect(isSuicideWarrior('dat #0, #0')).toBe(true);
+  });
+
+  it('detects with spaces around comma', () => {
+    expect(isSuicideWarrior('DAT #0 , #0')).toBe(true);
+  });
+
+  it('rejects multi-instruction warriors', () => {
+    expect(isSuicideWarrior('MOV 0, 1\nDAT #0, #0')).toBe(false);
+  });
+
+  it('rejects real warriors', () => {
+    const code = `;redcode-94nop
+;name Imp
+MOV 0, 1
+END`;
+    expect(isSuicideWarrior(code)).toBe(false);
+  });
+
+  it('rejects empty redcode', () => {
+    expect(isSuicideWarrior('')).toBe(false);
+  });
+
+  it('rejects comment-only redcode', () => {
+    expect(isSuicideWarrior(';just a comment')).toBe(false);
+  });
+
+  it('rejects DAT with non-zero operands', () => {
+    expect(isSuicideWarrior('DAT #1, #0')).toBe(false);
+    expect(isSuicideWarrior('DAT #0, #1')).toBe(false);
+  });
 });
 
 describe('runBattle', () => {

@@ -125,4 +125,21 @@ export function runBattle(challengerRedcode: string, defenderRedcode: string): B
   };
 }
 
+/**
+ * Detect "suicide" warriors — programs whose only instruction is DAT #0,#0.
+ * These die instantly and exist solely to feed rating points to an opponent.
+ * Comments and blank lines are ignored; only the assembled instructions matter.
+ */
+export function isSuicideWarrior(redcode: string): boolean {
+  const instructions = redcode
+    .split('\n')
+    .map((line) => line.replace(/;.*/, '').trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^END\b/i.test(line));
+
+  if (instructions.length !== 1) return false;
+
+  return /^DAT\s+#0\s*,\s*#0$/i.test(instructions[0]);
+}
+
 export { CORE_SIZE, MAX_CYCLES, MAX_TASKS, MIN_SEPARATION, NUM_ROUNDS, MAX_WARRIOR_LENGTH };

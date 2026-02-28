@@ -18,7 +18,7 @@ import {
   isMaintenanceMode,
   getRecentPairBattleCount,
 } from '@/lib/db';
-import { runBattle, parseWarrior } from '@/lib/engine';
+import { runBattle, parseWarrior, isSuicideWarrior } from '@/lib/engine';
 import { calculateNewRatings } from '@/lib/glicko';
 import { calculateDiminishingFactor, applyDiminishingFactor } from '@/lib/diminishing';
 
@@ -33,6 +33,7 @@ const mockIsMaintenanceMode = isMaintenanceMode as jest.MockedFunction<typeof is
 const mockGetRecentPairBattleCount = getRecentPairBattleCount as jest.MockedFunction<typeof getRecentPairBattleCount>;
 const mockRunBattle = runBattle as jest.MockedFunction<typeof runBattle>;
 const mockParseWarrior = parseWarrior as jest.MockedFunction<typeof parseWarrior>;
+const mockIsSuicideWarrior = isSuicideWarrior as jest.MockedFunction<typeof isSuicideWarrior>;
 const mockCalcRatings = calculateNewRatings as jest.MockedFunction<typeof calculateNewRatings>;
 const mockCalcDiminishing = calculateDiminishingFactor as jest.MockedFunction<typeof calculateDiminishingFactor>;
 const mockApplyDiminishing = applyDiminishingFactor as jest.MockedFunction<typeof applyDiminishingFactor>;
@@ -55,7 +56,7 @@ const challengerWarrior = makeWarrior({ id: 1, player_id: 1, redcode: 'MOV 0, 1'
 const defenderWarrior = makeWarrior({ id: 2, player_id: 2, redcode: 'DAT #0, #0' });
 
 
-function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie'; pairCount?: number }) {
+function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | 'defender_win' | 'tie'; pairCount?: number; suicideLoser?: boolean }) {
   const result = overrides?.overallResult ?? 'challenger_win';
   const pairCount = overrides?.pairCount ?? 0;
   let cWins = 60, dWins = 30, tCount = 10;
@@ -68,6 +69,7 @@ function setupFullBattleMocks(overrides?: { overallResult?: 'challenger_win' | '
     .mockResolvedValueOnce(challengerWarrior)
     .mockResolvedValueOnce(defenderWarrior);
   mockParseWarrior.mockReturnValue({ success: true, errors: [], instructionCount: 5 });
+  mockIsSuicideWarrior.mockReturnValue(overrides?.suicideLoser ?? false);
   mockRunBattle.mockReturnValue({
     rounds: [{ round: 1, winner: 'challenger', seed: 12345 }],
     challengerWins: cWins,
@@ -363,5 +365,50 @@ describe('POST /api/challenge', () => {
       }),
       expect.anything()
     );
+  });
+
+  it('nullifies rating changes when losing defender is a suicide warrior', async () => {
+    setupFullBattleMocks({ overallResult: 'challenger_win', suicideLoser: true });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.suicide_nullified).toBe(true);
+    expect(data.diminishing_factor).toBe(0);
+    expect(mockCalcRatings).not.toHaveBeenCalled();
+    // Ratings unchanged — old values passed through with factor 0
+    expect(mockApplyDiminishing).toHaveBeenCalledWith(
+      0,
+      expect.objectContaining({ rating: 1200 }),
+      expect.objectContaining({ rating: 1200 }),
+      expect.objectContaining({ rating: 1200 }),
+      expect.objectContaining({ rating: 1200 }),
+    );
+  });
+
+  it('nullifies rating changes when losing challenger is a suicide warrior', async () => {
+    setupFullBattleMocks({ overallResult: 'defender_win', suicideLoser: true });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.suicide_nullified).toBe(true);
+    expect(mockCalcRatings).not.toHaveBeenCalled();
+  });
+
+  it('does not nullify ratings on a tie even if warrior is suicide', async () => {
+    setupFullBattleMocks({ overallResult: 'tie', suicideLoser: true });
+    const req = createRequest('http://localhost:3000/api/challenge', {
+      method: 'POST',
+      body: { defender_id: 2 },
+    });
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.suicide_nullified).toBe(false);
+    expect(mockCalcRatings).toHaveBeenCalled();
   });
 });
