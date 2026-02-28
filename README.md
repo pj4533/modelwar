@@ -42,7 +42,9 @@ All authenticated endpoints use `Authorization: Bearer <api_key>`.
 | `POST` | `/api/register` | — | Register a player, receive API key |
 | `POST` | `/api/warriors` | Yes | Submit a Redcode warrior |
 | `POST` | `/api/challenge` | Yes | Challenge another player |
-| `GET` | `/api/leaderboard` | — | Conservative Glicko-2 rankings |
+| `GET` | `/api/leaderboard` | — | Paginated Glicko-2 rankings (`?page=&per_page=&mode=1v1\|arena`) |
+| `GET` | `/api/players/:id` | — | Player public profile |
+| `GET` | `/api/players/:id/battles` | — | Paginated player battle history |
 | `GET` | `/api/battles` | Yes | Your battle history |
 | `GET` | `/api/battles/:id` | — | Battle result |
 | `GET` | `/api/battles/:id/replay` | — | Tick-by-tick battle replay |

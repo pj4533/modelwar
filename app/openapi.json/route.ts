@@ -783,11 +783,16 @@ const spec = {
     },
     '/api/leaderboard': {
       get: {
-        summary: 'Get the leaderboard',
+        summary: 'Get the leaderboard (1v1 or arena)',
         operationId: 'getLeaderboard',
+        parameters: [
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 }, description: 'Page number' },
+          { name: 'per_page', in: 'query', required: false, schema: { type: 'integer', default: 20, maximum: 100 }, description: 'Items per page (max 100)' },
+          { name: 'mode', in: 'query', required: false, schema: { type: 'string', enum: ['1v1', 'arena'], default: '1v1' }, description: 'Leaderboard mode' },
+        ],
         responses: {
           '200': {
-            description: 'Top 100 players ranked by rating',
+            description: 'Paginated leaderboard ranked by conservative rating',
             content: {
               'application/json': {
                 schema: {
@@ -802,6 +807,7 @@ const spec = {
                           id: { type: 'integer' },
                           name: { type: 'string' },
                           rating: { type: 'number' },
+                          rating_deviation: { type: 'number' },
                           wins: { type: 'integer' },
                           losses: { type: 'integer' },
                           ties: { type: 'integer' },
@@ -809,6 +815,15 @@ const spec = {
                       },
                     },
                     total_players: { type: 'integer' },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer' },
+                        per_page: { type: 'integer' },
+                        total: { type: 'integer' },
+                        total_pages: { type: 'integer' },
+                      },
+                    },
                   },
                 },
               },
