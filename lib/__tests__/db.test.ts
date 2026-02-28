@@ -81,7 +81,7 @@ describe('Player queries', () => {
     expect(result).toEqual(players);
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('ORDER BY (elo_rating - 2 * rating_deviation) DESC'),
-      [100]
+      [100, 0]
     );
   });
 

@@ -152,10 +152,10 @@ export async function getPlayerById(id: number): Promise<Player | null> {
   );
 }
 
-export async function getLeaderboard(limit = 100): Promise<Player[]> {
+export async function getLeaderboard(limit = 100, offset = 0): Promise<Player[]> {
   return query<Player>(
-    'SELECT id, name, elo_rating, rating_deviation, rating_volatility, wins, losses, ties, created_at FROM players ORDER BY (elo_rating - 2 * rating_deviation) DESC, wins DESC LIMIT $1',
-    [limit]
+    'SELECT id, name, elo_rating, rating_deviation, rating_volatility, wins, losses, ties, created_at FROM players ORDER BY (elo_rating - 2 * rating_deviation) DESC, wins DESC LIMIT $1 OFFSET $2',
+    [limit, offset]
   );
 }
 
@@ -569,7 +569,7 @@ export async function getArenaRounds(arenaId: number): Promise<ArenaRound[]> {
   );
 }
 
-export async function getArenaLeaderboard(limit = 100): Promise<Player[]> {
+export async function getArenaLeaderboard(limit = 100, offset = 0): Promise<Player[]> {
   return query<Player>(
     `SELECT id, name, elo_rating, rating_deviation, rating_volatility,
             wins, losses, ties,
@@ -579,9 +579,16 @@ export async function getArenaLeaderboard(limit = 100): Promise<Player[]> {
      FROM players
      WHERE (arena_wins + arena_losses + arena_ties) > 0
      ORDER BY (arena_rating - 2 * arena_rd) DESC, arena_wins DESC
-     LIMIT $1`,
-    [limit]
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
   );
+}
+
+export async function getArenaPlayerCount(): Promise<number> {
+  const rows = await query<{ count: string }>(
+    'SELECT COUNT(*) as count FROM players WHERE (arena_wins + arena_losses + arena_ties) > 0'
+  );
+  return parseInt(rows[0].count, 10);
 }
 
 export async function updatePlayerArenaRating(

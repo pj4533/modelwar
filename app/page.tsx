@@ -8,21 +8,23 @@ import {
   getFeaturedArenas as dbGetFeaturedArenas,
   getPlayersByIds,
   getArenaLeaderboard,
+  getArenaPlayerCount,
 } from '@/lib/db';
 import type { UnifiedBattleEntry } from '@/lib/db';
 import { findDecisiveRound } from '@/lib/battle-utils';
-import { conservativeRating, PROVISIONAL_RD_THRESHOLD } from '@/lib/player-utils';
+import { conservativeRating } from '@/lib/player-utils';
 import { ClickableRow } from '@/app/components/ClickableRow';
 import HeroReplay from '@/components/HeroReplay';
 import HeroArenaReplay from '@/components/HeroArenaReplay';
 import HomeTabs from '@/components/HomeTabs';
 import PaginatedRecentActivity from '@/app/components/PaginatedRecentActivity';
+import PaginatedLeaderboard from '@/app/components/PaginatedLeaderboard';
 
 interface LeaderboardEntry {
   rank: number;
   id: number;
   name: string;
-  elo_rating: number;
+  rating: number;
   rating_deviation: number;
   wins: number;
   losses: number;
@@ -85,7 +87,7 @@ async function getLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; tota
         rank: i + 1,
         id: p.id,
         name: p.name,
-        elo_rating: p.elo_rating,
+        rating: conservativeRating(p.elo_rating, p.rating_deviation),
         rating_deviation: p.rating_deviation,
         wins: p.wins,
         losses: p.losses,
@@ -228,23 +230,27 @@ async function fetchFeaturedBattles(): Promise<{
   }
 }
 
-async function getArenaLeaderboardData(): Promise<{ entries: LeaderboardEntry[] }> {
+async function getArenaLeaderboardData(): Promise<{ entries: LeaderboardEntry[]; totalPlayers: number }> {
   try {
-    const players = await getArenaLeaderboard(20);
+    const [players, totalPlayers] = await Promise.all([
+      getArenaLeaderboard(20),
+      getArenaPlayerCount(),
+    ]);
     return {
       entries: players.map((p, i) => ({
         rank: i + 1,
         id: p.id,
         name: p.name,
-        elo_rating: p.arena_rating,
+        rating: conservativeRating(p.arena_rating, p.arena_rd),
         rating_deviation: p.arena_rd,
         wins: p.arena_wins,
         losses: p.arena_losses,
         ties: p.arena_ties,
       })),
+      totalPlayers,
     };
   } catch {
-    return { entries: [] };
+    return { entries: [], totalPlayers: 0 };
   }
 }
 
@@ -266,7 +272,7 @@ export default async function Home() {
     { entries: leaderboard, totalPlayers },
     { battles, playerNames, totalBattles },
     { heroBattle, featuredBattles },
-    { entries: arenaLeaderboard },
+    { entries: arenaLeaderboard, totalPlayers: totalArenaPlayers },
   ] = await Promise.all([
     getLeaderboardData(),
     fetchRecentBattles(),
@@ -278,7 +284,7 @@ export default async function Home() {
     <>
       <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-4">
         <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
-          {'// 1v1 Leaderboard'} {totalPlayers > 20 ? '(Top 20)' : ''}
+          {'// 1v1 Leaderboard'}
         </h2>
         {totalPlayers > 0 && (
           <span className="text-dim text-xs">
@@ -295,39 +301,12 @@ export default async function Home() {
           </code>
         </div>
       ) : (
-        <div className="border border-border overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th className="w-12">#</th>
-                <th>Player</th>
-                <th className="text-right">Rating <Link href="/ratings" className="text-dim hover:text-cyan font-normal text-xs">[?]</Link></th>
-                <th className="text-right">W</th>
-                <th className="text-right">L</th>
-                <th className="text-right">T</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((entry) => (
-                <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
-                  <td className="text-dim">{entry.rank}</td>
-                  <td className={`${entry.rank <= 3 ? 'text-cyan glow-cyan' : ''} player-name-truncate`}>
-                    {entry.name}
-                  </td>
-                  <td className="text-right text-green glow-green font-bold">
-                    {conservativeRating(entry.elo_rating, entry.rating_deviation)}
-                    {entry.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
-                      <Link href="/ratings" className="ml-2 text-yellow text-xs font-normal tracking-wider hover:underline">[PROV]</Link>
-                    )}
-                  </td>
-                  <td className="text-right text-green">{entry.wins}</td>
-                  <td className="text-right text-red">{entry.losses}</td>
-                  <td className="text-right text-yellow">{entry.ties}</td>
-                </ClickableRow>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PaginatedLeaderboard
+          initialEntries={leaderboard}
+          totalPlayers={totalPlayers}
+          perPage={20}
+          mode="1v1"
+        />
       )}
     </>
   );
@@ -412,40 +391,16 @@ export default async function Home() {
     <>
       <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-4">
         <h2 className="text-cyan glow-cyan text-sm uppercase tracking-widest">
-          {'// Multiplayer Leaderboard'} {arenaLeaderboard.length >= 20 ? '(Top 20)' : ''}
+          {'// Multiplayer Leaderboard'}
         </h2>
       </div>
       {arenaLeaderboard.length > 0 ? (
-        <div className="border border-border overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th className="w-12">#</th>
-                <th>Player</th>
-                <th className="text-right">Arena Rating</th>
-                <th className="text-right">W</th>
-                <th className="text-right">L</th>
-                <th className="text-right">T</th>
-              </tr>
-            </thead>
-            <tbody>
-              {arenaLeaderboard.map((entry) => (
-                <ClickableRow href={`/players/${entry.id}`} key={entry.id}>
-                  <td className="text-dim">{entry.rank}</td>
-                  <td className={`${entry.rank <= 3 ? 'text-cyan glow-cyan' : ''} player-name-truncate`}>
-                    {entry.name}
-                  </td>
-                  <td className="text-right text-green glow-green font-bold">
-                    {conservativeRating(entry.elo_rating, entry.rating_deviation)}
-                  </td>
-                  <td className="text-right text-green">{entry.wins}</td>
-                  <td className="text-right text-red">{entry.losses}</td>
-                  <td className="text-right text-yellow">{entry.ties}</td>
-                </ClickableRow>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PaginatedLeaderboard
+          initialEntries={arenaLeaderboard}
+          totalPlayers={totalArenaPlayers}
+          perPage={20}
+          mode="arena"
+        />
       ) : (
         <div className="border border-border p-6 text-center">
           <p className="text-dim text-lg mb-4">No arena battles yet</p>
