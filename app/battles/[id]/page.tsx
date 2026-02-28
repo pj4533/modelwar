@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import LocalTimestamp from '@/app/components/LocalTimestamp';
+import BattleCombatants from './BattleCombatants';
 import { getBattleById, getPlayerById } from '@/lib/db';
 import type { RoundResultRecord } from '@/lib/db';
 
@@ -16,6 +17,8 @@ interface BattleDetail {
   challenger_elo_after: number;
   defender_elo_before: number;
   defender_elo_after: number;
+  challenger_redcode: string | null;
+  defender_redcode: string | null;
   round_results: RoundResultRecord[] | null;
   created_at: string;
 }
@@ -46,6 +49,8 @@ async function getBattle(id: number): Promise<{ battle: BattleDetail | null; cha
         challenger_elo_after: battle.challenger_elo_after,
         defender_elo_before: battle.defender_elo_before,
         defender_elo_after: battle.defender_elo_after,
+        challenger_redcode: battle.challenger_redcode,
+        defender_redcode: battle.defender_redcode,
         round_results: battle.round_results,
         created_at: String(battle.created_at),
       },
@@ -55,12 +60,6 @@ async function getBattle(id: number): Promise<{ battle: BattleDetail | null; cha
   } catch {
     return { battle: null, challenger: null, defender: null };
   }
-}
-
-function eloChange(before: number, after: number): string {
-  const diff = after - before;
-  if (diff > 0) return `+${diff}`;
-  return `${diff}`;
 }
 
 export const dynamic = 'force-dynamic';
@@ -126,37 +125,25 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Combatants */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        {/* Challenger */}
-        <Link href={`/players/${battle.challenger_id}`} className="border border-border p-4 hover:border-cyan transition-colors">
-          <p className="text-xs text-dim uppercase tracking-wider mb-2">Challenger</p>
-          <p className={`text-lg ${battle.result === 'challenger_win' ? 'text-green glow-green' : 'text-foreground'}`}>
-            {challenger?.name || `Player #${battle.challenger_id}`}
-          </p>
-          <p className="text-sm mt-2">
-            Rating: {battle.challenger_elo_before}{' '}
-            <span className={battle.challenger_elo_after >= battle.challenger_elo_before ? 'text-green' : 'text-red'}>
-              ({eloChange(battle.challenger_elo_before, battle.challenger_elo_after)})
-            </span>
-          </p>
-          <p className="text-dim text-xs mt-1">Rounds won: {battle.challenger_wins}</p>
-        </Link>
-
-        {/* Defender */}
-        <Link href={`/players/${battle.defender_id}`} className="border border-border p-4 hover:border-cyan transition-colors">
-          <p className="text-xs text-dim uppercase tracking-wider mb-2">Defender</p>
-          <p className={`text-lg ${battle.result === 'defender_win' ? 'text-green glow-green' : 'text-foreground'}`}>
-            {defender?.name || `Player #${battle.defender_id}`}
-          </p>
-          <p className="text-sm mt-2">
-            Rating: {battle.defender_elo_before}{' '}
-            <span className={battle.defender_elo_after >= battle.defender_elo_before ? 'text-green' : 'text-red'}>
-              ({eloChange(battle.defender_elo_before, battle.defender_elo_after)})
-            </span>
-          </p>
-          <p className="text-dim text-xs mt-1">Rounds won: {battle.defender_wins}</p>
-        </Link>
-      </div>
+      <BattleCombatants
+        result={battle.result}
+        challenger={{
+          id: battle.challenger_id,
+          name: challenger?.name || `Player #${battle.challenger_id}`,
+          eloBefore: battle.challenger_elo_before,
+          eloAfter: battle.challenger_elo_after,
+          wins: battle.challenger_wins,
+          redcode: battle.challenger_redcode,
+        }}
+        defender={{
+          id: battle.defender_id,
+          name: defender?.name || `Player #${battle.defender_id}`,
+          eloBefore: battle.defender_elo_before,
+          eloAfter: battle.defender_elo_after,
+          wins: battle.defender_wins,
+          redcode: battle.defender_redcode,
+        }}
+      />
 
       {/* Per-round results */}
       {battle.round_results && battle.round_results.length > 0 && (
