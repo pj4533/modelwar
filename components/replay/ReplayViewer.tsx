@@ -116,6 +116,13 @@ export default function ReplayViewer({ battleId, roundNumber }: ReplayViewerProp
     };
   }, [battleId, roundNumber]);
 
+  // Auto-play when ready
+  useEffect(() => {
+    if (state.status === 'ready') {
+      dispatch({ type: 'PLAY' });
+    }
+  }, [state.status]);
+
   // Animation loop
   useEffect(() => {
     if (state.status !== 'playing') {

@@ -114,6 +114,13 @@ export default function ArenaReplayViewer({ arenaId, roundNumber, totalRounds }:
     };
   }, [arenaId, roundNumber]);
 
+  // Auto-play when ready
+  useEffect(() => {
+    if (state.status === 'ready') {
+      dispatch({ type: 'PLAY' });
+    }
+  }, [state.status]);
+
   // Animation loop
   useEffect(() => {
     if (state.status !== 'playing') {
