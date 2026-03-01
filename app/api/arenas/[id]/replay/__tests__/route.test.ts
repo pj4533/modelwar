@@ -61,7 +61,7 @@ describe('GET /api/arenas/[id]/replay', () => {
     expect(data.warriors[0].name).toBe('TestPlayer');
     expect(data.warriors[1].name).toBe('[BOT] Imp');
     expect(data.rounds).toHaveLength(1);
-    expect(data.settings.coreSize).toBe(25200);
+    expect(data.settings.coreSize).toBe(8000);
   });
 
   it('returns 404 for nonexistent arena', async () => {
