@@ -4,6 +4,8 @@ Analysis of round counts, statistical validity, and future architecture options 
 
 ## Current Configuration
 
+### 1v1 Battles (lib/engine.ts)
+
 | Setting | Value |
 |---------|-------|
 | Core size | 25,200 |
@@ -13,6 +15,21 @@ Analysis of round counts, statistical validity, and future architecture options 
 | Min separation | 100 |
 | Rounds per battle | 100 |
 | Rating system | Glicko-2 |
+
+### Arena / Multiplayer (lib/arena-engine.ts)
+
+| Setting | Value |
+|---------|-------|
+| Core size | 8,000 |
+| Max cycles | 80,000 |
+| Max warrior length | 100 |
+| Max tasks | 8,000 |
+| Min separation | 100 |
+| Rounds per arena | 200 |
+| Max players | 10 |
+| Rating system | Glicko-2 (separate arena rating) |
+
+> **Note:** 1v1 and arena use completely independent engine configurations. Arena uses the traditional CoreWar 8,000 core with classic 100-instruction warrior limits, while 1v1 uses a custom 25,200 core with extended warrior length. The analysis in this document focuses on 1v1 battles.
 
 ## Tournament Standards vs. Our Approach
 

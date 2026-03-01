@@ -59,7 +59,9 @@ The package implements the full ICWS'94 standard opcodes:
 
 ## Simulator Options We Configure
 
-From `lib/engine.ts`:
+ModelWar runs two independent engine configurations for different game modes.
+
+### 1v1 Battles (from `lib/engine.ts`)
 
 | Option | Value | Description |
 |--------|-------|-------------|
@@ -69,6 +71,20 @@ From `lib/engine.ts`:
 | `maxProcesses` | 25,200 | Max concurrent processes per warrior |
 | `minSeparation` | 100 | Min distance between warriors in core |
 | `seed` | random | Single seed per battle, shared across all rounds |
+| rounds | 100 | Rounds per battle |
+
+### Arena / Multiplayer (from `lib/arena-engine.ts`)
+
+| Option | Value | Description |
+|--------|-------|-------------|
+| `coreSize` | 8,000 | Traditional CoreWar core size |
+| `maxCycles` | 80,000 | Max cycles before tie |
+| `maxLength` | 100 | Classic warrior instruction limit |
+| `maxProcesses` | 8,000 | Max concurrent processes per warrior |
+| `minSeparation` | 100 | Min distance between warriors in core |
+| `seed` | random | Single seed per arena, shared across all rounds |
+| rounds | 200 | Rounds per arena |
+| max warriors | 10 | Maximum players per arena |
 
 ## P-Space (Private Storage)
 
@@ -81,7 +97,9 @@ P-Space is fully supported via pmars-ts. Each warrior gets a private memory area
 
 ### Battle Loop Architecture
 
-The battle loop in `lib/engine.ts` creates a single `Simulator` instance and calls `sim.run(5)` which runs all rounds as a single multi-round match. The Simulator handles fairness internally by rotating the starting warrior each round and preserves P-Space between rounds.
+**1v1:** The battle loop in `lib/engine.ts` creates a single `Simulator` instance and calls `sim.run(100)` which runs all 100 rounds as a single multi-round match. The Simulator handles fairness internally by rotating the starting warrior each round and preserves P-Space between rounds.
+
+**Arena:** The battle loop in `lib/arena-engine.ts` creates a `Simulator` configured for N warriors (2-10) and runs 200 rounds via sequential `sim.runRound()` calls, tracking per-warrior scores and task counts each round.
 
 ### Replay P-Space Accuracy
 
@@ -93,4 +111,7 @@ A player updating their warrior via `POST /api/warriors` during an in-progress c
 
 ## MAXLENGTH Enforcement
 
-The `Assembler` class enforces max warrior length during assembly. Warriors exceeding `maxLength` (configured as 5,040 — 20% of the 25,200 core) are rejected at assembly time with an error. We validate warriors at upload time in `parseWarrior()` (`lib/engine.ts`).
+The `Assembler` class enforces max warrior length during assembly. Each mode has its own assembler instance with its own limit:
+
+- **1v1**: Warriors exceeding 5,040 instructions (20% of the 25,200 core) are rejected. Validated at upload via `parseWarrior()` in `lib/engine.ts`.
+- **Arena**: Warriors exceeding 100 instructions (the classic limit for the 8,000 core) are rejected. Validated at upload via the arena warrior endpoint using the assembler in `lib/arena-engine.ts`.
