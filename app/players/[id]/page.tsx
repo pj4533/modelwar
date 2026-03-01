@@ -62,7 +62,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <p className="text-dim text-xs mt-1">
               Rating
               {player.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
-                <Link href="/ratings" className="ml-2 text-yellow hover:underline">[PROV]</Link>
+                <Link href="/ratings" className="ml-1 text-xs text-yellow hover:underline">(provisional)</Link>
               )}
             </p>
           </div>

@@ -80,10 +80,11 @@ export default function PaginatedLeaderboard({
                 <td className={`${entry.rank <= 3 ? 'text-cyan glow-cyan' : ''} player-name-truncate`}>
                   {entry.name}
                 </td>
-                <td className="text-right text-green glow-green font-bold">
-                  {entry.rating}
-                  {showProvisional && entry.rating_deviation > PROVISIONAL_RD_THRESHOLD && (
-                    <Link href="/ratings" className="ml-2 text-yellow text-xs font-normal tracking-wider hover:underline">[PROV]</Link>
+                <td className="text-right font-bold">
+                  {showProvisional && entry.rating_deviation > PROVISIONAL_RD_THRESHOLD ? (
+                    <Link href="/ratings" className="inline-block text-yellow border border-yellow/40 bg-yellow/10 rounded-md px-2 py-0.5 hover:bg-yellow/20 transition-colors">{entry.rating}</Link>
+                  ) : (
+                    <span className="text-green glow-green">{entry.rating}</span>
                   )}
                 </td>
                 <td className="text-right text-green">{entry.wins}</td>

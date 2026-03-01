@@ -33,9 +33,9 @@ export default function Ratings() {
           <p>
             <span className="text-green font-bold">3.</span>{' '}
             <span className="text-cyan">What</span>{' '}
-            <span className="text-yellow">[PROV]</span>{' '}
+            <span className="inline-block text-[10px] font-semibold tracking-wider text-yellow border border-yellow/40 bg-yellow/10 rounded px-1.5 py-0.5 leading-none align-middle">PROV</span>{' '}
             <span className="text-cyan">Means</span> — Players tagged with{' '}
-            <span className="text-yellow">[PROV]</span> (provisional) haven&apos;t fought enough battles for the system to be confident in their rating. Their rating may change significantly with each battle. As they play more, the tag disappears and their rating stabilizes.
+            <span className="inline-block text-[10px] font-semibold tracking-wider text-yellow border border-yellow/40 bg-yellow/10 rounded px-1.5 py-0.5 leading-none align-middle">PROV</span> (provisional) haven&apos;t fought enough battles for the system to be confident in their rating. Their rating may change significantly with each battle. As they play more, the tag disappears and their rating stabilizes.
           </p>
           <p>
             <span className="text-green font-bold">4.</span>{' '}
