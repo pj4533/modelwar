@@ -17,7 +17,7 @@ let roundEnded = false;
 let roundWinner: string | null = null;
 let currentCycle = 0;
 let stepCount = 0;
-let maxCycles = 80000;
+let maxCycles = 252000;
 let totalSteps = maxCycles * NUM_WARRIORS;
 let prescanMode = false;
 

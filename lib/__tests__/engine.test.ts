@@ -71,7 +71,7 @@ describe('parseWarrior', () => {
   it('returns failure for warriors that fail assembly', () => {
     mockAssemble.mockReturnValueOnce({
       success: false,
-      messages: [{ type: 'ERROR', line: 0, text: 'Warrior has 3901 instructions, limit is 3900' }],
+      messages: [{ type: 'ERROR', line: 0, text: 'Warrior has 5041 instructions, limit is 5040' }],
       warrior: null,
     });
 
@@ -81,14 +81,14 @@ describe('parseWarrior', () => {
     expect(result.instructionCount).toBe(0);
   });
 
-  it('accepts warriors at exactly MAX_WARRIOR_LENGTH (3900)', () => {
-    mockAssemble.mockReturnValueOnce(successAssemble(3900));
+  it('accepts warriors at exactly MAX_WARRIOR_LENGTH (5040)', () => {
+    mockAssemble.mockReturnValueOnce(successAssemble(5040));
 
     const result = parseWarrior('BIG WARRIOR');
 
     expect(result.success).toBe(true);
     expect(result.errors).toEqual([]);
-    expect(result.instructionCount).toBe(3900);
+    expect(result.instructionCount).toBe(5040);
   });
 
   it('returns failure with formatted error messages', () => {
@@ -268,10 +268,10 @@ describe('runBattle', () => {
 
     // Verify Simulator was constructed with direct API options
     expect(MockSimulator).toHaveBeenCalledWith({
-      coreSize: 8000,
-      maxCycles: 80000,
-      maxProcesses: 8000,
-      maxLength: 3900,
+      coreSize: 25200,
+      maxCycles: 252000,
+      maxProcesses: 25200,
+      maxLength: 5040,
       minSeparation: 100,
       seed: expect.any(Number),
     });

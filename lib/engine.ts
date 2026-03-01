@@ -1,12 +1,12 @@
 import { Simulator, Assembler } from 'pmars-ts';
 import type { RoundResult as SimRoundResult } from 'pmars-ts';
 
-const CORE_SIZE = 8000;
-const MAX_CYCLES = 80000;
-const MAX_TASKS = 8000;
+const CORE_SIZE = 25200;
+const MAX_CYCLES = 252000;
+const MAX_TASKS = 25200;
 const MIN_SEPARATION = 100;
 const NUM_ROUNDS = 100;
-const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
+const MAX_WARRIOR_LENGTH = 5040;
 
 export interface ParseResult {
   success: boolean;
@@ -28,8 +28,8 @@ export interface BattleResult {
   overallResult: 'challenger_win' | 'defender_win' | 'tie';
 }
 
-// Assembler configured with correct options so warriors with FOR/ROF macros
-// that expand beyond the default maxLength=100 are handled correctly.
+// Assembler configured with ModelWar's custom core settings.
+// maxLength is 5040 (20% of 25200 core), not the traditional CORESIZE/2 formula.
 const assembler = new Assembler({
   coreSize: CORE_SIZE,
   maxCycles: MAX_CYCLES,

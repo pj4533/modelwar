@@ -63,10 +63,10 @@ From `lib/engine.ts`:
 
 | Option | Value | Description |
 |--------|-------|-------------|
-| `coreSize` | 8,000 | Size of the core memory |
-| `maxCycles` | 80,000 | Max cycles before tie |
-| `maxLength` | 3,900 | Max warrior instruction count (CORE_SIZE/2 - MIN_SEPARATION) |
-| `maxProcesses` | 8,000 | Max concurrent processes per warrior |
+| `coreSize` | 25,200 | Size of the core memory (non-standard; traditional is 8,000) |
+| `maxCycles` | 252,000 | Max cycles before tie |
+| `maxLength` | 5,040 | Max warrior instruction count (explicit limit, 20% of core) |
+| `maxProcesses` | 25,200 | Max concurrent processes per warrior |
 | `minSeparation` | 100 | Min distance between warriors in core |
 | `seed` | random | Single seed per battle, shared across all rounds |
 
@@ -93,4 +93,4 @@ A player updating their warrior via `POST /api/warriors` during an in-progress c
 
 ## MAXLENGTH Enforcement
 
-The `Assembler` class enforces max warrior length during assembly. Warriors exceeding `maxLength` (configured as CORESIZE/2 - MINSEPARATION = 3,900) are rejected at assembly time with an error. We validate warriors at upload time in `parseWarrior()` (`lib/engine.ts`).
+The `Assembler` class enforces max warrior length during assembly. Warriors exceeding `maxLength` (configured as 5,040 — 20% of the 25,200 core) are rejected at assembly time with an error. We validate warriors at upload time in `parseWarrior()` (`lib/engine.ts`).

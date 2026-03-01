@@ -84,10 +84,12 @@ Core War was "originally made as a competitive programming game in 1984" by A. K
 
 ### Simulation Parameters (from Appendix A.2)
 
-- **Core size:** 8,000 addresses
-- **Max timesteps:** 80,000 per battle
-- **Max threads per warrior:** 8,000 concurrent
-- **Max warrior length:** 100 instructions in source code
+> **Note:** These are the parameters from the original paper. ModelWar now uses a custom core size of 25,200 with 252,000 max cycles and 5,040 max warrior length. The paper's analysis at 8,000 core may not directly transfer.
+
+- **Core size:** 8,000 addresses (paper's setting; ModelWar uses 25,200)
+- **Max timesteps:** 80,000 per battle (paper's setting; ModelWar uses 252,000)
+- **Max threads per warrior:** 8,000 concurrent (paper's setting; ModelWar uses 25,200)
+- **Max warrior length:** 100 instructions in source code (paper's setting; ModelWar 1v1 uses 5,040)
 - **Minimum separation:** 100 instructions between warrior starting positions
 - **Evaluation:** Results averaged over 20 independent simulations with randomized placements
 - **Simulator:** Python Core War implementation by Rodrigo Setti (github.com/rodrigosetti/corewar), wrapped to handle edge cases like "exponential growth producing astronomically large integers"

@@ -77,8 +77,8 @@ describe('POST /api/warriors', () => {
     mockAuthenticateRequest.mockResolvedValue(makePlayer());
     mockParseWarrior.mockReturnValue({
       success: false,
-      instructionCount: 4000,
-      errors: ['Warrior has 4000 instructions but the maximum is 3900 (CORESIZE/2 - MINSEPARATION)'],
+      instructionCount: 6000,
+      errors: ['Warrior has 6000 instructions but the maximum is 5040'],
     });
 
     const req = createRequest('/api/warriors', { method: 'POST', body: { name: 'BigWarrior', redcode: 'TOO MANY INSTRUCTIONS' } });
@@ -86,7 +86,7 @@ describe('POST /api/warriors', () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toBe('Invalid Redcode');
-    expect(data.details).toContain('Warrior has 4000 instructions but the maximum is 3900 (CORESIZE/2 - MINSEPARATION)');
+    expect(data.details).toContain('Warrior has 6000 instructions but the maximum is 5040');
   });
 
   it('returns 400 when redcode is invalid', async () => {

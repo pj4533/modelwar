@@ -1,6 +1,6 @@
 import type { ArenaReplayState, CoreEvent } from './types';
 
-const CORE_SIZE = 8000;
+const CORE_SIZE = 25200;
 const NUM_WARRIORS = 10;
 
 export function formatCycle(n: number): string {
@@ -27,7 +27,7 @@ export function createInitialState(): ArenaReplayState {
   return {
     status: 'loading',
     cycle: 0,
-    maxCycles: 80000,
+    maxCycles: 252000,
     endCycle: null,
     territoryMap: new Uint8Array(CORE_SIZE),
     activityMap: new Uint8Array(CORE_SIZE),

@@ -2,9 +2,9 @@ import { Simulator, Assembler } from 'pmars-ts';
 import type { TaskCountEvent } from 'pmars-ts';
 
 // Reuse 1v1 constants for consistency
-const CORE_SIZE = 8000;
-const MAX_CYCLES = 80000;
-const MAX_TASKS = 8000;
+const CORE_SIZE = 25200;
+const MAX_CYCLES = 252000;
+const MAX_TASKS = 25200;
 const MIN_SEPARATION = 100;
 const MAX_WARRIOR_LENGTH = 100;
 

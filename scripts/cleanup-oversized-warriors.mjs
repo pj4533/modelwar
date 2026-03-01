@@ -1,4 +1,4 @@
-// Cleanup script: delete warriors exceeding MAX_WARRIOR_LENGTH (3900 instructions)
+// Cleanup script: delete warriors exceeding MAX_WARRIOR_LENGTH (5040 instructions)
 // and reset their owner's ratings since battle results may be tainted.
 //
 // Run: node scripts/cleanup-oversized-warriors.mjs
@@ -9,9 +9,9 @@ import { Assembler } from 'pmars-ts';
 
 config({ path: '.env.local' });
 
-const CORE_SIZE = 8000;
+const CORE_SIZE = 25200;
 const MIN_SEPARATION = 100;
-const MAX_WARRIOR_LENGTH = Math.floor(CORE_SIZE / 2 - MIN_SEPARATION);
+const MAX_WARRIOR_LENGTH = 5040;
 
 const assembler = new Assembler({
   coreSize: CORE_SIZE,

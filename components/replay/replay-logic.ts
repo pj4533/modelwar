@@ -1,6 +1,6 @@
 import type { ReplayState, CoreEvent } from './types';
 
-const CORE_SIZE = 8000;
+const CORE_SIZE = 25200;
 
 export function formatCycle(n: number): string {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -26,7 +26,7 @@ export function createInitialState(): ReplayState {
   return {
     status: 'loading',
     cycle: 0,
-    maxCycles: 80000,
+    maxCycles: 252000,
     endCycle: null,
     territoryMap: new Uint8Array(CORE_SIZE),
     activityMap: new Uint8Array(CORE_SIZE),

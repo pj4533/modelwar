@@ -13,7 +13,7 @@ let roundEnded = false;
 let roundWinner: number | null = null; // slot index or null for tie
 let currentCycle = 0;
 let stepCount = 0;
-let maxCycles = 80000;
+let maxCycles = 252000;
 let totalSteps = 0;
 let prescanMode = false;
 
