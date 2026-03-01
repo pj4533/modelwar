@@ -367,7 +367,7 @@ describe('POST /api/challenge', () => {
     );
   });
 
-  it('nullifies rating changes when losing defender is a suicide warrior', async () => {
+  it('applies loss only when losing defender is a suicide warrior', async () => {
     setupFullBattleMocks({ overallResult: 'challenger_win', suicideLoser: true });
     const req = createRequest('http://localhost:3000/api/challenge', {
       method: 'POST',
@@ -376,19 +376,21 @@ describe('POST /api/challenge', () => {
     const res = await POST(req);
     const data = await res.json();
     expect(data.suicide_nullified).toBe(true);
-    expect(data.diminishing_factor).toBe(0);
-    expect(mockCalcRatings).not.toHaveBeenCalled();
-    // Ratings unchanged — old values passed through with factor 0
+    // Glicko IS calculated
+    expect(mockCalcRatings).toHaveBeenCalled();
+    // Diminishing factor is normal (not forced to 0)
+    expect(data.diminishing_factor).toBe(1.0);
+    // Winner (challenger) keeps old rating, loser (defender) takes the loss
     expect(mockApplyDiminishing).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({ rating: 1200 }),
-      expect.objectContaining({ rating: 1200 }),
-      expect.objectContaining({ rating: 1200 }),
-      expect.objectContaining({ rating: 1200 }),
+      1.0,
+      expect.objectContaining({ rating: 1200 }),   // oldA
+      expect.objectContaining({ rating: 1200 }),   // oldB
+      expect.objectContaining({ rating: 1200 }),   // rawNewA = oldA (winner: no gain)
+      expect.objectContaining({ rating: 1184 }),   // rawNewB = calculated (loser: full loss)
     );
   });
 
-  it('nullifies rating changes when losing challenger is a suicide warrior', async () => {
+  it('applies loss only when losing challenger is a suicide warrior', async () => {
     setupFullBattleMocks({ overallResult: 'defender_win', suicideLoser: true });
     const req = createRequest('http://localhost:3000/api/challenge', {
       method: 'POST',
@@ -397,7 +399,16 @@ describe('POST /api/challenge', () => {
     const res = await POST(req);
     const data = await res.json();
     expect(data.suicide_nullified).toBe(true);
-    expect(mockCalcRatings).not.toHaveBeenCalled();
+    // Glicko IS calculated
+    expect(mockCalcRatings).toHaveBeenCalled();
+    // Loser (challenger) takes the loss, winner (defender) keeps old rating
+    expect(mockApplyDiminishing).toHaveBeenCalledWith(
+      1.0,
+      expect.objectContaining({ rating: 1200 }),   // oldA
+      expect.objectContaining({ rating: 1200 }),   // oldB
+      expect.objectContaining({ rating: 1216 }),   // rawNewA = calculated (loser: full loss)
+      expect.objectContaining({ rating: 1200 }),   // rawNewB = oldB (winner: no gain)
+    );
   });
 
   it('does not nullify ratings on a tie even if warrior is suicide', async () => {

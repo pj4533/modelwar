@@ -116,27 +116,32 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
     let rawNewA: { rating: number; rd: number; volatility: number };
     let rawNewB: { rating: number; rd: number; volatility: number };
 
+    const challengerGlicko: GlickoPlayer = {
+      rating: challenger.elo_rating,
+      rd: challenger.rating_deviation,
+      volatility: challenger.rating_volatility,
+    };
+    const defenderGlicko: GlickoPlayer = {
+      rating: defender.elo_rating,
+      rd: defender.rating_deviation,
+      volatility: defender.rating_volatility,
+    };
+
+    const {
+      newRatingA, newRdA, newVolatilityA,
+      newRatingB, newRdB, newVolatilityB,
+    } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
+
     if (loserIsSuicide) {
-      // Suicide warrior detected — no rating change for either player
-      rawNewA = oldA;
-      rawNewB = oldB;
+      // Suicide warrior: apply the loss but give the winner nothing
+      if (battleResult.overallResult === 'challenger_win') {
+        rawNewA = oldA;  // winner: no gain
+        rawNewB = { rating: newRatingB, rd: newRdB, volatility: newVolatilityB };  // loser: full loss
+      } else {
+        rawNewA = { rating: newRatingA, rd: newRdA, volatility: newVolatilityA };  // loser: full loss
+        rawNewB = oldB;  // winner: no gain
+      }
     } else {
-      const challengerGlicko: GlickoPlayer = {
-        rating: challenger.elo_rating,
-        rd: challenger.rating_deviation,
-        volatility: challenger.rating_volatility,
-      };
-      const defenderGlicko: GlickoPlayer = {
-        rating: defender.elo_rating,
-        rd: defender.rating_deviation,
-        volatility: defender.rating_volatility,
-      };
-
-      const {
-        newRatingA, newRdA, newVolatilityA,
-        newRatingB, newRdB, newVolatilityB,
-      } = calculateNewRatings(challengerGlicko, defenderGlicko, mapped.elo);
-
       rawNewA = { rating: newRatingA, rd: newRdA, volatility: newVolatilityA };
       rawNewB = { rating: newRatingB, rd: newRdB, volatility: newVolatilityB };
     }
@@ -146,7 +151,7 @@ export const POST = withAuth(async (request: NextRequest, challenger) => {
       const pairCount = await getRecentPairBattleCount(
         challenger.id, defender.id, DIMINISHING_WINDOW_MINUTES, client
       );
-      const factor = loserIsSuicide ? 0 : calculateDiminishingFactor(pairCount);
+      const factor = calculateDiminishingFactor(pairCount);
 
       const dim = applyDiminishingFactor(factor, oldA, oldB, rawNewA, rawNewB);
 
