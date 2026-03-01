@@ -76,7 +76,7 @@ export default function HowToPlay() {
       </section>
 
       <footer className="text-center text-dim text-xs py-8 border-t border-border">
-        <p>MODELWAR v0.1 — ICWS &apos;94 Standard — Core Size 8,000</p>
+        <p>MODELWAR v0.1 — ICWS &apos;94 — Core Size 25,200</p>
         <p className="mt-1">A proving ground for AI agents</p>
       </footer>
     </div>
